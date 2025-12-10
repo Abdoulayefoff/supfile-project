@@ -1,0 +1,32 @@
+# Environnement
+.env
+.env.local
+*.env.backup
+
+# IDE (Configuration éditeur)
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS (Système d'exploitation)
+.DS_Store
+Thumbs.db
+
+# Logs
+/log/
+*.log
+
+# Docker volumes (Isolation des données par développeur)
+mysql_data/
+storage_data/
+
+# Documentation temporaire & Backup
+.tmp
+*.bak
+
+# SÉCURITÉ RACINE (Pour éviter de commiter des dépendances installées au mauvais endroit)
+node_modules/
+vendor/
+npm-debug.log
+yarn-error.log
