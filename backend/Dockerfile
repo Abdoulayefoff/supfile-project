@@ -1,67 +1,33 @@
 FROM php:8.3-cli
 
-# ==========================================
 # Installation des dépendances système
-# ==========================================
 RUN apt-get update && apt-get install -y \
-    # Dépendances de base
-    libzip-dev \
-    zip \
-    unzip \
-    git \
-    libicu-dev \
-    # Dépendances pour GD (images - pour bonus miniatures)
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    # Nettoyage
+    libzip-dev zip unzip git libicu-dev \
+    libpng-dev libjpeg-dev libfreetype6-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql zip intl gd \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# ==========================================
 # Installation de Composer
-# ==========================================
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# ==========================================
-# Configuration du répertoire de travail
-# ==========================================
 WORKDIR /var/www/html
 
-# ==========================================
-# Copie et installation des dépendances
-# ==========================================
-# Copier composer.json et composer.lock en premier (cache Docker)
-COPY composer.json composer.lock ./
-
-# Installation des dépendances Composer
+# Configuration Composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
-RUN composer install --no-scripts --no-autoloader --prefer-dist --no-dev --optimize-autoloader || true
 
-# ==========================================
-# Copie du reste de l'application
-# ==========================================
+# Copier TOUT le code source
 COPY . .
 
-# ==========================================
-# Finalisation de l'installation Composer
-# ==========================================
-RUN composer dump-autoload --optimize
+# Installer TOUTES les dépendances Composer
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
-# ==========================================
-# Création et permissions des dossiers
-# ==========================================
+# Créer les dossiers nécessaires
 RUN mkdir -p storage var/cache var/log config/jwt \
     && chmod -R 777 storage var config/jwt
 
-# ==========================================
-# Exposition du port
-# ==========================================
 EXPOSE 8000
 
-# ==========================================
-# Commande de démarrage
-# ==========================================
-CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]
+# Préchauffer le cache puis démarrer
+CMD php bin/console cache:warmup --no-optional-warmers 2>/dev/null || true && \
+    php -S 0.0.0.0:8000 -t public
