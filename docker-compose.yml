@@ -1,18 +1,90 @@
-version: '3.8'
+#version: '3.8'
 
 services:
-  # TODO: À compléter par l'équipe DevOps
-  
+  # ==========================================
+  # Service Base de Données MySQL
+  # ==========================================
   database:
     image: mysql:8.0
+    container_name: supfile-db
+    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD:-password}
-      MYSQL_DATABASE: ${DATABASE_NAME:-supfile_db}
-    volumes:
-      - mysql_data:/var/lib/mysql
+      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD}
+      MYSQL_DATABASE: ${DATABASE_NAME}
     ports:
       - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DATABASE_PASSWORD}"]
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - supfile-network
 
+  # ==========================================
+  # Service Backend (Symfony API)
+  # ==========================================
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: supfile-api
+    restart: on-failure
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www/html
+      - file_storage:/var/www/html/storage
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      APP_ENV: ${APP_ENV}
+      APP_SECRET: ${APP_SECRET}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      JWT_PASSPHRASE: ${JWT_PASSPHRASE}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN}
+    networks:
+      - supfile-network
+
+  # ==========================================
+  # Service Frontend Web (React + Vite)
+  # ==========================================
+  web:
+    build:
+      context: ./frontend-web
+      dockerfile: Dockerfile
+    container_name: supfile-web
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend-web:/app
+      - /app/node_modules  
+    environment:
+      VITE_API_URL: ${VITE_API_URL}
+    depends_on:
+      - api
+    networks:
+      - supfile-network
+
+# ==========================================
+# Volumes Docker (Persistance des données)
+# ==========================================
 volumes:
   mysql_data:
+    driver: local
   file_storage:
+    driver: local
+
+# ==========================================
+# Network (Communication entre services)
+# ==========================================
+networks:
+  supfile-network:
+    driver: bridge

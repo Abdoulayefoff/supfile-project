@@ -1,32 +1,81 @@
-# Environnement
-.env
-.env.local
-*.env.backup
+# ==========================================
+# SUPFILE - Git Ignore Configuration
+# ==========================================
 
-# IDE (Configuration éditeur)
+# --- Environnement (CRITIQUE) ---
+.env
+.env.*
+!.env.example
+*.env.backup
+.env.*.local
+
+# Fichiers d'environnement dans les sous-dossiers
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+frontend-web/.env
+frontend-web/.env.*
+!frontend-web/.env.example
+
+frontend-mobile/.env
+frontend-mobile/.env.*
+!frontend-mobile/.env.example
+
+# --- IDE (Configuration éditeur) ---
 .idea/
 .vscode/
 *.swp
 *.swo
+*.sublime-*
 
-# OS (Système d'exploitation)
+# --- OS (Système d'exploitation) ---
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
 
-# Logs
+# --- Logs ---
 /log/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Docker volumes (Isolation des données par développeur)
+# --- Docker volumes ---
 mysql_data/
+file_storage/
 storage_data/
 
-# Documentation temporaire & Backup
+# --- Documentation temporaire & Backup ---
 .tmp
 *.bak
+*.backup
 
-# SÉCURITÉ RACINE (Pour éviter de commiter des dépendances installées au mauvais endroit)
-node_modules/
-vendor/
-npm-debug.log
-yarn-error.log
+# --- Dépendances (sécurité : au cas où installées au mauvais endroit) ---
+/node_modules/
+/vendor/
+
+# --- Symfony compose files (on utilise docker-compose.yml à la racine) ---
+/backend/compose.yaml
+/backend/compose.override.yaml
+
+# --- Build & Cache ---
+/backend/var/
+/frontend-web/dist/
+/frontend-web/.vite/
+/frontend-mobile/.expo/
+/frontend-mobile/dist/
+
+# --- Secrets & Keys (double sécurité) ---
+*.pem
+*.key
+*.crt
+*-key.pem
+*-cert.pem
+!backend/config/jwt/.gitkeep
