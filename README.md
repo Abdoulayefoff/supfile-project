@@ -22,7 +22,7 @@ Plateforme de stockage cloud développée dans le cadre du projet 4PROJ.
 5. Quand `develop` est stable, merge dans `master`
 
 ## Équipe
-- Dev 1 : [Nom] (Backend Symfony)
-- Dev 2 : [Nom] (Backend Symfony)
-- Dev 3 : [Nom] (Frontend Web React)
-- Dev 4 : [Nom] (Frontend Mobile React Native)
+- Dev 1 : [Abdoulaye]
+- Dev 2 : [Rayelen]
+- Dev 3 : [Tharshan]
+- Dev 4 : [Kendall]

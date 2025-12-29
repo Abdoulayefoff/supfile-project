@@ -1,33 +1,57 @@
-FROM php:8.3-cli
+FROM php:8.3-fpm
 
-# Installation des dépendances système
+# Installer les dépendances système
 RUN apt-get update && apt-get install -y \
-    libzip-dev zip unzip git libicu-dev \
-    libpng-dev libjpeg-dev libfreetype6-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_mysql zip intl gd \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    libzip-dev \
+    nginx \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Installation de Composer
+# Installer Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Configurer PHP pour les uploads de gros fichiers
+RUN echo "upload_max_filesize = 2G" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size = 2G" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "max_execution_time = 1800" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "max_input_time = 1800" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "memory_limit = 512M" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "upload_tmp_dir = /var/www/html/var/tmp" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && mkdir -p /var/www/html/var/tmp \
+    && chown -R www-data:www-data /var/www/html/var/tmp \
+    && chmod 755 /var/www/html/var/tmp
+
+# Créer le répertoire de travail
 WORKDIR /var/www/html
 
-# Configuration Composer
-ENV COMPOSER_ALLOW_SUPERUSER=1
+# Copier la configuration Nginx
+COPY docker/nginx.conf /etc/nginx/sites-available/default
 
-# Copier TOUT le code source
-COPY . .
+# Créer les répertoires nécessaires avec les bonnes permissions
+RUN mkdir -p /var/www/html/var/cache \
+    && mkdir -p /var/www/html/var/log \
+    && mkdir -p /var/www/html/var/sessions \
+    && mkdir -p /var/www/html/var/tmp \
+    && mkdir -p /var/www/html/storage \
+    && mkdir -p /var/www/html/public/uploads/avatars \
+    && chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 /var/www/html/var \
+    && chmod -R 775 /var/www/html/storage \
+    && chmod -R 775 /var/www/html/public/uploads
 
-# Installer TOUTES les dépendances Composer
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
-
-# Créer les dossiers nécessaires
-RUN mkdir -p storage var/cache var/log config/jwt \
-    && chmod -R 777 storage var config/jwt
-
+# Exposer le port 8000
 EXPOSE 8000
 
-# Préchauffer le cache puis démarrer
-CMD php bin/console cache:warmup --no-optional-warmers 2>/dev/null || true && \
-    php -S 0.0.0.0:8000 -t public
+# Copier le script de démarrage
+COPY docker/start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
+# Démarrer PHP-FPM et Nginx
+CMD ["/usr/local/bin/start.sh"]
