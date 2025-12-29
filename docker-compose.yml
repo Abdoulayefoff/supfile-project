@@ -1,91 +1,81 @@
-#version: '3.8'
-
 services:
-  # ==========================================
-  # Service Base de Données MySQL
-  # ==========================================
+  # Service Base de données MySQL
   database:
     image: mysql:8.0
-    container_name: supfile-db
-    restart: always
+    container_name: supfile_database
     environment:
-      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD}
-      MYSQL_DATABASE: ${DATABASE_NAME}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "3306:3306"
+      - "3307:3306"  # Port externe 3307 pour éviter conflit avec MySQL local
     volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DATABASE_PASSWORD}"]
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      - mysql_data:/var/lib/mysql  # Volume persistant pour les données
     networks:
-      - supfile-network
+      - supfile_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
 
-  # ==========================================
-  # Service Backend (Symfony API)
-  # ==========================================
+  # Service API Symfony
   api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: supfile-api
-    restart: on-failure
+    container_name: supfile_api
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/var/www/html
-      - /var/www/html/vendor
-      - file_storage:/var/www/html/storage
-    depends_on:
-      database:
-        condition: service_healthy
+      - ./backend:/var/www/html  # Montage du code source pour le développement
+      - storage_data:/var/www/html/storage  # Volume persistant pour les fichiers uploadés
+      - ./docs:/var/www/docs  # Montage de la documentation
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: "mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@database:3306/${MYSQL_DATABASE}?serverVersion=8.0"
       APP_ENV: ${APP_ENV}
       APP_SECRET: ${APP_SECRET}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
       JWT_PASSPHRASE: ${JWT_PASSPHRASE}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN}
+      OAUTH_GOOGLE_CLIENT_ID: ${OAUTH_GOOGLE_CLIENT_ID}
+      OAUTH_GOOGLE_CLIENT_SECRET: ${OAUTH_GOOGLE_CLIENT_SECRET}
+      OAUTH_GITHUB_CLIENT_ID: ${OAUTH_GITHUB_CLIENT_ID}
+      OAUTH_GITHUB_CLIENT_SECRET: ${OAUTH_GITHUB_CLIENT_SECRET}
+      DEFAULT_URI: ${DEFAULT_URI:-}
+    depends_on:
+      database:
+        condition: service_healthy  # Attendre que MySQL soit prêt
     networks:
-      - supfile-network
+      - supfile_network
 
-  # ==========================================
-  # Service Frontend Web (React + Vite)
-  # ==========================================
+  # Service Frontend Web React
   web:
     build:
       context: ./frontend-web
       dockerfile: Dockerfile
-    container_name: supfile-web
+    container_name: supfile_web
     ports:
-      - "5173:5173"
+      - "3000:3000"
     volumes:
-      - ./frontend-web:/app
-      - /app/node_modules  
+      - ./frontend-web:/app  # Montage du code source pour le hot reload
+      - /app/node_modules  # Volume anonyme pour éviter l'écrasement des node_modules
     environment:
       VITE_API_URL: ${VITE_API_URL}
     depends_on:
-      - api
+      - api  # Attendre que l'API soit démarrée
     networks:
-      - supfile-network
+      - supfile_network
 
-# ==========================================
-# Volumes Docker (Persistance des données)
-# ==========================================
+# Volumes Docker pour la persistance des données
 volumes:
-  mysql_data:
+  mysql_data:      # Persiste les données MySQL entre les redémarrages
     driver: local
-  file_storage:
+  storage_data:    # Persiste les fichiers uploadés entre les redémarrages
     driver: local
 
-# ==========================================
-# Network (Communication entre services)
-# ==========================================
+# Réseau Docker pour la communication entre services
 networks:
-  supfile-network:
+  supfile_network:
     driver: bridge

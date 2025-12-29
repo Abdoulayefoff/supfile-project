@@ -1,31 +1,20 @@
 FROM node:20-alpine
 
-# ==========================================
-# Configuration du répertoire de travail
-# ==========================================
 WORKDIR /app
 
-# ==========================================
-# Copie et installation des dépendances
-# ==========================================
-# Copier package.json et package-lock.json en premier (cache Docker)
+# Copier les fichiers package
 COPY package*.json ./
 
-# Installation des dépendances
-RUN npm install
+# Installer les dépendances avec nettoyage du cache
+RUN npm cache clean --force && \
+    npm install --legacy-peer-deps && \
+    npm cache clean --force
 
-# ==========================================
-# Copie du reste de l'application
-# ==========================================
+# Copier le reste des fichiers
 COPY . .
 
-# ==========================================
-# Exposition du port Vite
-# ==========================================
-EXPOSE 5173
+# Exposer le port 3000
+EXPOSE 3000
 
-# ==========================================
-# Commande de démarrage
-# ==========================================
-# --host 0.0.0.0 permet l'accès depuis l'extérieur du conteneur
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Démarrer le serveur de développement Vite
+CMD ["npm", "run", "dev", "--", "--host", "--port", "3000"]
