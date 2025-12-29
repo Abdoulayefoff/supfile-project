@@ -1,0 +1,34 @@
+# Force LF line endings for all text files across all platforms
+
+# Default behavior: convert to LF on commit
+* text=auto eol=lf
+
+# Shell scripts MUST use LF
+*.sh text eol=lf
+
+# Environment files MUST use LF
+.env* text eol=lf
+
+# Config files MUST use LF
+*.conf text eol=lf
+*.config text eol=lf
+
+# Dockerfiles MUST use LF
+Dockerfile* text eol=lf
+docker-compose*.yml text eol=lf
+
+# Source code files
+*.php text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Windows batch files can keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
