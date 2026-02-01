@@ -318,7 +318,7 @@ info "Conteneurs démarrés "
 
 # Étape 2 : Installer les dépendances backend
 info "Étape 2/7 : Installation des dépendances backend..."
-set +e
+set +e  # Désactiver set -e temporairement
 if ! docker compose exec -T api composer install --no-interaction; then
     warn "Erreur lors de l'installation des dépendances. Réessayez..."
     docker compose exec api composer install --no-interaction
@@ -327,13 +327,13 @@ if ! docker compose exec -T api composer install --no-interaction; then
         exit 1
     fi
 fi
-set -e
+set -e  # Réactiver set -e
 info "Dépendances backend installées "
 
-# Vider le cache Symfony
-info "Nettoyage du cache Symfony..."
+info "Vider le cache Symfony..."
 docker compose exec -T api php bin/console cache:clear
 info "Cache Symfony vidé "
+
 
 # Étape 3 : Générer les clés JWT
 info "Étape 3/7 : Génération des clés JWT..."
@@ -342,7 +342,7 @@ docker compose exec -T api mkdir -p config/jwt
 docker compose exec -T api chmod -R 777 config/jwt 2>/dev/null || true
 
 if docker compose exec -T api php bin/console lexik:jwt:generate-keypair --skip-if-exists 2>/dev/null; then
-    info "Clés JWT générées ✓"
+    info "Clés JWT générées "
 else
     docker compose exec -T api php bin/console lexik:jwt:generate-keypair --no-interaction 2>/dev/null || warn "Les clés JWT existent déjà"
 fi
@@ -369,7 +369,7 @@ if [ $MYSQL_READY -eq 0 ]; then
     exit 1
 fi
 
-info "MySQL est prêt ✓"
+info "MySQL est prêt "
 
 # Créer la base de données
 info "Création de la base de données '$MYSQL_DATABASE'..."
@@ -378,7 +378,7 @@ docker compose exec -T database mysql -uroot -p"$MYSQL_ROOT_PASSWORD" <<EOF 2>/d
 CREATE DATABASE IF NOT EXISTS $MYSQL_DATABASE CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 EOF
 set -e
-info "Base de données créée ✓"
+info "Base de données créée "
 
 # Créer l'utilisateur MySQL
 info "Configuration de l'utilisateur MySQL '$MYSQL_USER'..."
