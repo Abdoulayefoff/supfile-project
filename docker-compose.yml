@@ -44,6 +44,7 @@ services:
       OAUTH_GITHUB_CLIENT_ID: ${OAUTH_GITHUB_CLIENT_ID}
       OAUTH_GITHUB_CLIENT_SECRET: ${OAUTH_GITHUB_CLIENT_SECRET}
       DEFAULT_URI: ${DEFAULT_URI:-}
+      MESSENGER_TRANSPORT_DSN: ${MESSENGER_TRANSPORT_DSN:-doctrine://default}
     depends_on:
       database:
         condition: service_healthy  # Attendre que MySQL soit prêt
