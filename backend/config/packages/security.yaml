@@ -17,7 +17,7 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
-        
+
         # Firewall pour l'authentification (login, register)
         login:
             pattern: ^/api/auth
@@ -49,9 +49,9 @@ security:
         - { path: ^/api/auth/login, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/register, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/refresh, roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/oauth, roles: PUBLIC_ACCESS }  # Routes OAuth (Google, GitHub, Microsoft)
         - { path: ^/api/public, roles: PUBLIC_ACCESS }
         - { path: ^/api/doc, roles: PUBLIC_ACCESS }
-        
         # Toutes les autres routes API nécessitent une authentification
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
