@@ -30,8 +30,8 @@ class AuthController extends AbstractController
             return new JsonResponse(['error' => 'Email and password are required'], 400);
         }
 
-        if (strlen($data['password']) < 6) {
-            return new JsonResponse(['error' => 'Password must be at least 6 characters'], 400);
+        if (strlen($data['password']) < 8) {
+            return new JsonResponse(['error' => 'Le mot de passe doit contenir au moins 8 caractères'], 400);
         }
 
         $existingUser = $this->em->getRepository(User::class)->findOneBy(['email' => $data['email']]);
