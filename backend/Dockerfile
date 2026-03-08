@@ -24,6 +24,9 @@ RUN echo "upload_max_filesize = 2G" >> /usr/local/etc/php/conf.d/uploads.ini \
     && echo "max_input_time = 1800" >> /usr/local/etc/php/conf.d/uploads.ini \
     && echo "memory_limit = 512M" >> /usr/local/etc/php/conf.d/uploads.ini \
     && echo "upload_tmp_dir = /var/www/html/var/tmp" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "output_buffering = 4096" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "display_errors = Off" >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "log_errors = On" >> /usr/local/etc/php/conf.d/uploads.ini \
     && mkdir -p /var/www/html/var/tmp \
     && chown -R www-data:www-data /var/www/html/var/tmp \
     && chmod 755 /var/www/html/var/tmp
