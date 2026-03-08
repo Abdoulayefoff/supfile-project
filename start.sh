@@ -316,6 +316,15 @@ fi
 
 info "Conteneurs démarrés "
 
+# Créer les dossiers de stockage nécessaires
+# Ces dossiers sont ignorés par Git mais doivent exister
+# pour que les uploads PHP fonctionnent correctement
+info "Création des dossiers de stockage..."
+mkdir -p backend/storage
+mkdir -p backend/var/tmp
+chmod 777 backend/var/tmp
+info "Dossiers de stockage créés "
+
 # Étape 2 : Installer les dépendances backend
 info "Étape 2/7 : Installation des dépendances backend..."
 set +e  # Désactiver set -e temporairement

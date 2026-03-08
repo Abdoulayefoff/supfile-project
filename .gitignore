@@ -94,11 +94,9 @@ backend/compose.override.yaml.backup
 
 # --- Build & Cache ---
 # Symfony
-backend/var/
 backend/var/cache/
 backend/var/log/
 backend/var/sessions/
-backend/var/tmp/
 
 # React/Vite
 frontend-web/dist/

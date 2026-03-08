@@ -29,9 +29,14 @@ security:
                 success_handler: lexik_jwt_authentication.handler.authentication_success
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
 
+        # Firewall pour la documentation PDF (accès public)
+        docs:
+            pattern: ^/docs
+            security: false
+
         # Firewall pour les routes publiques (partage public, etc.)
         public:
-            pattern: ^/api/public
+            pattern: ^/api/(public|shares/public)
             stateless: true
             security: false
 
@@ -46,11 +51,14 @@ security:
     # Note: Only the *first* matching rule is applied
     access_control:
         # Routes publiques (pas d'authentification requise)
+        - { path: ^/docs, roles: PUBLIC_ACCESS }
+        - { path: ^/api/health, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/login, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/register, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/refresh, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/oauth, roles: PUBLIC_ACCESS }  # Routes OAuth (Google, GitHub, Microsoft)
         - { path: ^/api/public, roles: PUBLIC_ACCESS }
+        - { path: ^/api/shares/public, roles: PUBLIC_ACCESS }
         - { path: ^/api/doc, roles: PUBLIC_ACCESS }
         # Toutes les autres routes API nécessitent une authentification
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }

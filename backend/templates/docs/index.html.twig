@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUPFile — Documentation</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --sidebar-width: 300px;
+            --topbar-height: 64px;
+            --accent: #6366f1;
+            --accent-light: #eef2ff;
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-active: #312e81;
+            --text-muted-sidebar: #94a3b8;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #f8fafc;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ── Topbar ── */
+        .topbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: var(--topbar-height);
+            background: linear-gradient(135deg, #312e81 0%, #4f46e5 100%);
+            display: flex;
+            align-items: center;
+            padding: 0 1.5rem;
+            z-index: 100;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+        }
+
+        .topbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .topbar-brand .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            backdrop-filter: blur(4px);
+        }
+
+        .topbar-brand .brand-name {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .topbar-brand .brand-sub {
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.65);
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .topbar-badge {
+            margin-left: auto;
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            padding: 0.3rem 0.85rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+        }
+
+        /* ── Layout ── */
+        .layout {
+            display: flex;
+            height: 100vh;
+            padding-top: var(--topbar-height);
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: var(--sidebar-width);
+            min-width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 1.25rem 1rem 0.75rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .sidebar-header h6 {
+            color: var(--text-muted-sidebar);
+            text-transform: uppercase;
+            font-size: 0.68rem;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .sidebar-search {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .sidebar-search input {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #e2e8f0;
+            padding: 0.5rem 0.85rem 0.5rem 2.25rem;
+            font-size: 0.85rem;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .sidebar-search input::placeholder { color: var(--text-muted-sidebar); }
+        .sidebar-search input:focus { border-color: var(--accent); }
+
+        .sidebar-search-icon {
+            position: absolute;
+            left: 1.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted-sidebar);
+            font-size: 0.85rem;
+            pointer-events: none;
+        }
+
+        .sidebar-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .sidebar-list::-webkit-scrollbar { width: 4px; }
+        .sidebar-list::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+
+        .doc-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.65rem 0.85rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            margin-bottom: 0.25rem;
+            text-decoration: none;
+        }
+
+        .doc-item:hover {
+            background: var(--sidebar-hover);
+            transform: translateX(2px);
+        }
+
+        .doc-item.active {
+            background: var(--sidebar-active);
+            box-shadow: inset 3px 0 0 var(--accent);
+        }
+
+        .doc-item .doc-icon {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: #a5b4fc;
+        }
+
+        .doc-item.active .doc-icon {
+            background: rgba(99, 102, 241, 0.4);
+            color: #c7d2fe;
+        }
+
+        .doc-item .doc-info { overflow: hidden; }
+
+        .doc-item .doc-name {
+            color: #e2e8f0;
+            font-size: 0.85rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+
+        .doc-item .doc-size {
+            color: var(--text-muted-sidebar);
+            font-size: 0.72rem;
+            display: block;
+            margin-top: 1px;
+        }
+
+        .sidebar-footer {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            color: var(--text-muted-sidebar);
+            font-size: 0.72rem;
+            text-align: center;
+        }
+
+        /* ── Viewer ── */
+        .viewer {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #e5e7eb;
+        }
+
+        .viewer-header {
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            min-height: 54px;
+        }
+
+        .viewer-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #1e293b;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .viewer-title .viewer-icon {
+            color: var(--accent);
+            margin-right: 0.4rem;
+        }
+
+        .btn-download {
+            margin-left: auto;
+            white-space: nowrap;
+        }
+
+        .viewer-body {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #pdf-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+        }
+
+        /* ── Empty state ── */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            color: #6b7280;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        .empty-state .empty-icon {
+            width: 80px;
+            height: 80px;
+            background: #f3f4f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #9ca3af;
+        }
+
+        .empty-state h5 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #374151;
+            margin: 0;
+        }
+
+        .empty-state p {
+            font-size: 0.875rem;
+            margin: 0;
+            max-width: 280px;
+            line-height: 1.5;
+        }
+
+        /* ── Empty sidebar ── */
+        .no-docs {
+            padding: 2rem 1rem;
+            text-align: center;
+            color: var(--text-muted-sidebar);
+            font-size: 0.82rem;
+        }
+
+        .no-docs i { font-size: 2rem; margin-bottom: 0.5rem; display: block; opacity: 0.4; }
+    </style>
+</head>
+<body>
+
+<!-- Topbar -->
+<header class="topbar">
+    <a href="/docs" class="topbar-brand">
+        <div class="logo-icon">
+            <i class="bi bi-file-earmark-text-fill"></i>
+        </div>
+        <div>
+            <div class="brand-name">SUPFile</div>
+            <div class="brand-sub">Documentation</div>
+        </div>
+    </a>
+    <span class="topbar-badge">
+        <i class="bi bi-files me-1"></i>{{ documents|length }} document{{ documents|length > 1 ? 's' : '' }}
+    </span>
+</header>
+
+<!-- Layout -->
+<div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h6><i class="bi bi-folder2-open me-1"></i>Documents PDF</h6>
+        </div>
+
+        {% if documents|length > 0 %}
+        <div class="sidebar-search position-relative">
+            <i class="bi bi-search sidebar-search-icon"></i>
+            <input type="text" id="search-input" placeholder="Rechercher…" autocomplete="off">
+        </div>
+        {% endif %}
+
+        <div class="sidebar-list" id="doc-list">
+            {% if documents|length > 0 %}
+                {% for doc in documents %}
+                <a href="#"
+                   class="doc-item"
+                   data-name="{{ doc.name }}"
+                   data-label="{{ doc.label }}"
+                   data-url="{{ path('docs_view', {filename: doc.name}) }}"
+                   onclick="openDoc(this); return false;">
+                    <div class="doc-icon">
+                        <i class="bi bi-file-earmark-pdf-fill"></i>
+                    </div>
+                    <div class="doc-info">
+                        <span class="doc-name">{{ doc.label }}</span>
+                        <span class="doc-size">PDF · {{ doc.size }}</span>
+                    </div>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="no-docs">
+                    <i class="bi bi-folder-x"></i>
+                    Aucun document PDF trouvé dans le répertoire.
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="sidebar-footer">
+            <i class="bi bi-folder2 me-1"></i>Répertoire <code style="font-size:0.7rem;">/docs</code>
+        </div>
+    </aside>
+
+    <!-- Viewer -->
+    <main class="viewer">
+        <!-- Header viewer -->
+        <div class="viewer-header" id="viewer-header">
+            <span class="viewer-title" id="viewer-title">
+                <i class="bi bi-file-earmark-pdf viewer-icon"></i>
+                <span id="viewer-title-text">Sélectionnez un document</span>
+            </span>
+            <a href="#" id="btn-download" class="btn btn-sm btn-outline-primary btn-download d-none" download>
+                <i class="bi bi-download me-1"></i>Télécharger
+            </a>
+        </div>
+
+        <!-- Corps du viewer -->
+        <div class="viewer-body">
+            <!-- État vide (par défaut) -->
+            <div class="empty-state" id="empty-state">
+                <div class="empty-icon">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                </div>
+                <h5>Aucun document ouvert</h5>
+                <p>Sélectionnez un document dans le menu de gauche pour l'afficher ici.</p>
+            </div>
+
+            <!-- iframe PDF -->
+            <iframe id="pdf-frame" title="Visionneur PDF"></iframe>
+        </div>
+    </main>
+
+</div>
+
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    function openDoc(el) {
+        // Mettre à jour l'item actif dans la sidebar
+        document.querySelectorAll('.doc-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+
+        const url   = el.dataset.url;
+        const label = el.dataset.label;
+        const name  = el.dataset.name;
+
+        // Mettre à jour le header du viewer
+        document.getElementById('viewer-title-text').textContent = label;
+
+        // Bouton téléchargement
+        const btnDownload = document.getElementById('btn-download');
+        btnDownload.href = url + '?dl=1';
+        btnDownload.download = name;
+        btnDownload.classList.remove('d-none');
+
+        // Afficher l'iframe
+        const frame = document.getElementById('pdf-frame');
+        const emptyState = document.getElementById('empty-state');
+
+        emptyState.style.display = 'none';
+        frame.style.display = 'block';
+        frame.src = url;
+    }
+
+    // Recherche en temps réel
+    document.getElementById('search-input')?.addEventListener('input', function () {
+        const q = this.value.toLowerCase().trim();
+        document.querySelectorAll('.doc-item').forEach(item => {
+            const label = item.dataset.label.toLowerCase();
+            item.style.display = label.includes(q) ? 'flex' : 'none';
+        });
+    });
+
+    // Ouvrir le premier document automatiquement s'il existe
+    const first = document.querySelector('.doc-item');
+    if (first) openDoc(first);
+</script>
+
+</body>
+</html>

@@ -4,14 +4,19 @@ namespace App\Security\Voter;
 
 use App\Entity\Folder;
 use App\Entity\User;
+use App\Repository\ShareRepository;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 
 class FolderVoter extends Voter
 {
-    public const VIEW = 'FOLDER_VIEW';
-    public const EDIT = 'FOLDER_EDIT';
+    public const VIEW   = 'FOLDER_VIEW';
+    public const EDIT   = 'FOLDER_EDIT';
     public const DELETE = 'FOLDER_DELETE';
+
+    public function __construct(
+        private ShareRepository $shareRepository,
+    ) {}
 
     protected function supports(string $attribute, mixed $subject): bool
     {
@@ -30,10 +35,10 @@ class FolderVoter extends Voter
         $folder = $subject;
 
         return match ($attribute) {
-            self::VIEW => $this->canView($folder, $user),
-            self::EDIT => $this->canEdit($folder, $user),
+            self::VIEW   => $this->canView($folder, $user),
+            self::EDIT   => $this->canEdit($folder, $user),
             self::DELETE => $this->canDelete($folder, $user),
-            default => false,
+            default      => false,
         };
     }
 
@@ -44,24 +49,28 @@ class FolderVoter extends Voter
             return true;
         }
 
-        // Vérifier les partages (sera complété au Sprint 5-6)
-        return false;
+        // Vérifier si le dossier est partagé avec l'utilisateur
+        return $this->shareRepository->findValidShareForFolder($user, $folder) !== null;
     }
 
     private function canEdit(Folder $folder, User $user): bool
     {
-        // Le propriétaire peut toujours éditer
-        if ($folder->getOwner() === $user) {
-            return true;
+        // Seul le propriétaire peut modifier
+        if ($folder->getOwner() !== $user) {
+            return false;
         }
 
-        // Vérifier les partages avec permission write (Sprint 5-6)
-        return false;
+        // Un dossier dans la corbeille ne peut plus être modifié
+        if ($folder->isDeleted()) {
+            return false;
+        }
+
+        return true;
     }
 
     private function canDelete(Folder $folder, User $user): bool
     {
-        // Seul le propriétaire peut supprimer
-        return $folder->getOwner() === $user;
+        // Seul le propriétaire peut supprimer, et une seule fois
+        return $folder->getOwner() === $user && !$folder->isDeleted();
     }
 }
