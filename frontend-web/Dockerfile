@@ -6,7 +6,10 @@ WORKDIR /app
 COPY package*.json ./
 
 # Installer les dépendances avec nettoyage du cache
-RUN npm cache clean --force && \
+# Supprime package-lock.json pour forcer une résolution fraîche des
+# dépendances natives optionnelles selon la plateforme cible (linux/arm64)
+RUN rm -f package-lock.json && \
+    npm cache clean --force && \
     npm install --legacy-peer-deps && \
     npm cache clean --force
 
