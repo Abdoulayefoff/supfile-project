@@ -1,3 +1,177 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Reset ── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; }
+
+/* ── Scrollbar fine ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.13); border-radius: 9999px; }
+
+/* ── Animations ── */
+.fade { animation: fadeIn .22s ease; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.float { animation: float 5s ease-in-out infinite; }
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+/* ── Hover ── */
+.row-hover  { transition: background .12s; cursor: pointer; }
+.card-hover { transition: all .2s cubic-bezier(.4,0,.2,1); cursor: pointer; }
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0,91,191,.12) !important;
+}
+
+/* Bouton ⋮ — invisible par défaut, visible au hover de la card/row */
+.menu-btn { opacity: 0; transition: opacity .15s; }
+.card-hover:hover .menu-btn,
+.row-hover:hover  .menu-btn  { opacity: 1; }
+
+/* ── Inputs ── */
+input, select, textarea { font-family: 'Inter', sans-serif; outline: none; }
+input:focus, textarea:focus { box-shadow: 0 0 0 2px #005bbf !important; }
+
+.sf-input {
+  border: none;
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-size: 14px;
+  transition: box-shadow .2s;
+  width: 100%;
+}
+
+.sf-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .10em;
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* ── Barre de progression ── */
+.progress {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #005bbf, #1a73e8);
+  transition: width .5s;
+}
+
+/* ── Sidebar nav item ── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  transition: all .15s;
+}
+.nav-item:hover  { background: rgba(0,91,191,.06); }
+.nav-item.active {
+  border-left-color: #1a73e8;
+  background: rgba(26,115,232,.10);
+  color: #1a73e8 !important;
+}
+
+/* ── Upload zone ── */
+.upload-zone {
+  border: 2px dashed;
+  border-radius: 16px;
+  padding: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all .2s;
+  text-align: center;
+}
+.upload-zone.drag {
+  border-color: #005bbf !important;
+  background: rgba(0,91,191,.05) !important;
+}
+
+/* ── Menu contextuel ── */
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background .12s;
+}
+.ctx-item:hover { background: rgba(0,0,0,.06); }
+
+/* ── Toggle switch ── */
+.toggle {
+  width: 44px;
+  height: 24px;
+  border-radius: 9999px;
+  cursor: pointer;
+  position: relative;
+  transition: background .2s;
+}
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  transition: left .2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+
+/* ── CSS Variables thème clair (défaut) ── */
+:root {
+  --bg:        #f0f2f5;
+  --surface:   #ffffff;
+  --low:       #f3f4f5;
+  --mid:       #e7e8e9;
+  --text:      #191c1d;
+  --muted:     #414754;
+  --border:    rgba(193,198,214,0.35);
+  --headerBg:  #f8f9fa;
+  --sidebarBg: #f3f4f5;
+  --primary:   #005bbf;
+  --dark:      #1a73e8;
+  --green:     #34a853;
+  --orange:    #f97316;
+  --amber:     #f59e0b;
+  --red:       #ba1a1a;
+  --tertiary:  #9e4300;
+}
+
+/* ── CSS Variables thème sombre ── */
+[data-theme="dark"] {
+  --bg:        #0f172a;
+  --surface:   #1e293b;
+  --low:       #1a2535;
+  --mid:       #243044;
+  --text:      #f1f5f9;
+  --muted:     #94a3b8;
+  --border:    rgba(255,255,255,0.07);
+  --headerBg:  #0f172a;
+  --sidebarBg: #111827;
+}

@@ -30,6 +30,10 @@ class AuthController extends AbstractController
             return new JsonResponse(['error' => 'Email and password are required'], 400);
         }
 
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            return new JsonResponse(['error' => 'Format d\'email invalide'], 400);
+        }
+
         if (strlen($data['password']) < 8) {
             return new JsonResponse(['error' => 'Le mot de passe doit contenir au moins 8 caractères'], 400);
         }

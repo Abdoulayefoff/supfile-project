@@ -164,11 +164,11 @@ class ShareController extends AbstractController
     }
 
     /**
-     * GET /api/shares/public/{token}/download
+     * POST /api/shares/public/{token}/download
      * Télécharge la ressource d'un partage public sans compte requis.
-     * Pour un partage protégé par mot de passe : ?password=xxx
+     * Le mot de passe (si requis) doit être transmis dans le body JSON : { "password": "xxx" }
      */
-    #[Route('/public/{token}/download', name: 'public_download', methods: ['GET'])]
+    #[Route('/public/{token}/download', name: 'public_download', methods: ['POST'])]
     public function publicDownload(string $token, Request $request): BinaryFileResponse|JsonResponse
     {
         $share = $this->shareManager->findByToken($token);
@@ -182,7 +182,8 @@ class ShareController extends AbstractController
         }
 
         if ($share->hasPassword()) {
-            $password = $request->query->get('password');
+            $data     = json_decode($request->getContent(), true) ?? [];
+            $password = $data['password'] ?? null;
             if (!$this->shareManager->validateShare($share, $password)) {
                 return $this->json(['error' => 'Mot de passe incorrect ou manquant'], Response::HTTP_UNAUTHORIZED);
             }
@@ -343,6 +344,11 @@ class ShareController extends AbstractController
             'createdAt' => $share->getCreatedAt()->format('c'),
             'resourceType' => $share->getResourceType(),
             'resource' => $resourceData,
+            'createdBy' => [
+                'id' => $share->getCreatedBy()->getId(),
+                'email' => $share->getCreatedBy()->getEmail(),
+                'fullName' => $share->getCreatedBy()->getFullName(),
+            ],
             'sharedWith' => $share->getSharedWith() ? [
                 'id' => $share->getSharedWith()->getId(),
                 'email' => $share->getSharedWith()->getEmail(),

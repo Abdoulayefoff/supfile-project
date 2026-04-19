@@ -45,19 +45,17 @@ class FileController extends AbstractController
             $this->denyAccessUnlessGranted(FolderVoter::VIEW, $folder);
         }
 
+        $search = trim((string) $request->query->get('search', ''));
+
         // Dans un dossier partagé, on liste tous les fichiers du dossier (propriétaire réel)
         // Dans un dossier personnel (ou à la racine), on liste uniquement les fichiers de l'utilisateur
         if ($folder !== null && $folder->getOwner() !== $user) {
-            $files = $this->fileRepository->findBy([
-                'folder'    => $folder,
-                'isDeleted' => false,
-            ]);
+            $files = $this->fileRepository->findByFolderAndSearch($folder, null, $search);
+        } elseif ($search !== '' && $folder === null) {
+            // Recherche globale (tous dossiers confondus) dans les fichiers de l'utilisateur
+            $files = $this->fileRepository->findByFolderAndSearch(null, $user, $search, true);
         } else {
-            $files = $this->fileRepository->findBy([
-                'owner'     => $user,
-                'folder'    => $folder,
-                'isDeleted' => false,
-            ]);
+            $files = $this->fileRepository->findByFolderAndSearch($folder, $user, $search);
         }
 
         return $this->json(array_map(fn(File $f) => $this->serializeFile($f), $files));
@@ -234,6 +232,7 @@ class FileController extends AbstractController
             'size'      => $file->getSize(),
             'mimeType'  => $file->getMimeType(),
             'folderId'  => $file->getFolder()?->getId(),
+            'owner'     => $file->getOwner()->getFullName(),
             'isDeleted' => $file->isDeleted(),
             'createdAt' => $file->getCreatedAt()?->format('c'),
             'updatedAt' => $file->getUpdatedAt()?->format('c'),
