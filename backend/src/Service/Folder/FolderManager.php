@@ -2,7 +2,9 @@
 
 namespace App\Service\Folder;
 
+use App\Entity\File;
 use App\Entity\Folder;
+use App\Entity\Share;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -85,9 +87,29 @@ class FolderManager
     /**
      * Suppression définitive depuis la corbeille (hard delete).
      * Le dossier doit déjà être soft-deleted avant d'appeler cette méthode.
+     *
+     * Supprime d'abord tous les partages et fichiers liés pour éviter
+     * les violations de contraintes FK.
      */
     public function permanentDeleteFolder(Folder $folder): void
     {
+        // 1. Supprimer les partages qui ciblent ce dossier (FK: shares.folder_id → folders.id)
+        $folderShares = $this->em->getRepository(Share::class)->findBy(['folder' => $folder]);
+        foreach ($folderShares as $share) {
+            $this->em->remove($share);
+        }
+
+        // 2. Supprimer les fichiers soft-deleted du dossier et leurs partages
+        $files = $this->em->getRepository(File::class)->findBy(['folder' => $folder]);
+        foreach ($files as $file) {
+            $fileShares = $this->em->getRepository(Share::class)->findBy(['file' => $file]);
+            foreach ($fileShares as $share) {
+                $this->em->remove($share);
+            }
+            $this->em->remove($file);
+        }
+
+        // 3. Supprimer le dossier lui-même
         $this->em->remove($folder);
         $this->em->flush();
     }

@@ -41,16 +41,10 @@ class OAuthController extends AbstractController
     {
         try {
             $result = $this->oauthService->handleGoogleAuth();
-            
-            // Récupérer l'URL de redirection (frontend)
-            $redirectUri = $request->query->get('redirect_uri', 'http://localhost:3000/auth/callback');
-            
-            // Rediriger vers le frontend avec le token
+            $redirectUri = $this->resolveRedirectUri($request);
             return new RedirectResponse($redirectUri . '?token=' . $result['token']);
-            
         } catch (\Exception $e) {
-            // En cas d'erreur, rediriger vers le frontend avec l'erreur
-            $redirectUri = $request->query->get('redirect_uri', 'http://localhost:3000/auth/callback');
+            $redirectUri = $this->resolveRedirectUri($request);
             return new RedirectResponse($redirectUri . '?error=' . urlencode($e->getMessage()));
         }
     }
@@ -108,16 +102,10 @@ class OAuthController extends AbstractController
     {
         try {
             $result = $this->oauthService->handleGithubAuth();
-            
-            // Récupérer l'URL de redirection (frontend)
-            $redirectUri = $request->query->get('redirect_uri', 'http://localhost:3000/auth/callback');
-            
-            // Rediriger vers le frontend avec le token
+            $redirectUri = $this->resolveRedirectUri($request);
             return new RedirectResponse($redirectUri . '?token=' . $result['token']);
-            
         } catch (\Exception $e) {
-            // En cas d'erreur, rediriger vers le frontend avec l'erreur
-            $redirectUri = $request->query->get('redirect_uri', 'http://localhost:3000/auth/callback');
+            $redirectUri = $this->resolveRedirectUri($request);
             return new RedirectResponse($redirectUri . '?error=' . urlencode($e->getMessage()));
         }
     }
@@ -175,18 +163,37 @@ class OAuthController extends AbstractController
     {
         try {
             $result = $this->oauthService->handleMicrosoftAuth();
-            
-            // Récupérer l'URL de redirection (frontend)
-            $redirectUri = $request->query->get('redirect_uri', 'http://localhost:3000/auth/callback');
-            
-            // Rediriger vers le frontend avec le token
+            $redirectUri = $this->resolveRedirectUri($request);
             return new RedirectResponse($redirectUri . '?token=' . $result['token']);
-            
         } catch (\Exception $e) {
-            // En cas d'erreur, rediriger vers le frontend avec l'erreur
-            $redirectUri = $request->query->get('redirect_uri', 'http://localhost:3000/auth/callback');
+            $redirectUri = $this->resolveRedirectUri($request);
             return new RedirectResponse($redirectUri . '?error=' . urlencode($e->getMessage()));
         }
+    }
+
+    /**
+     * Résout et valide l'URI de redirection contre une liste blanche.
+     * Empêche les attaques Open Redirect (OWASP A01).
+     */
+    private function resolveRedirectUri(Request $request): string
+    {
+        $allowedOrigins = [
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'http://127.0.0.1:3000',
+            'http://127.0.0.1:5173',
+        ];
+
+        $requested = $request->query->get('redirect_uri', '');
+
+        foreach ($allowedOrigins as $origin) {
+            if (str_starts_with($requested, $origin . '/') || $requested === $origin) {
+                return $requested;
+            }
+        }
+
+        // Fallback sécurisé si la valeur est absente ou non autorisée
+        return 'http://localhost:3000/auth/callback';
     }
 
     /**

@@ -26,9 +26,9 @@ class QuotaManager
      */
     public function updateQuota(User $user, int $sizeChange): void
     {
-        $newQuota = $user->getQuotaUsed() + $sizeChange;
+        $newQuota = (int) $user->getQuotaUsed() + $sizeChange;
         // Sécurité : ne jamais passer en dessous de 0
-        $user->setQuotaUsed(max(0, $newQuota));
+        $user->setQuotaUsed((string) max(0, $newQuota));
         $this->em->flush();
     }
 }

@@ -4,6 +4,7 @@ namespace App\Service\File;
 
 use App\Entity\File;
 use App\Entity\Folder;
+use App\Entity\Share;
 use App\Entity\User;
 use App\Service\Storage\FileStorageInterface;
 use App\Service\User\QuotaManager;
@@ -99,20 +100,29 @@ class FileManager
     /**
      * Suppression définitive : supprime le fichier physiquement
      * et libère le quota.
+     *
+     * On supprime d'abord tous les partages qui référencent ce fichier
+     * pour éviter la violation de contrainte FK (shares.file_id → files.id).
      */
     public function permanentDeleteFile(File $file): void
     {
-        $size = $file->getSize();
+        $size  = $file->getSize();
         $owner = $file->getOwner();
 
-        // Supprimer physiquement
+        // 1. Supprimer les partages associés (FK: shares.file_id → files.id)
+        $shares = $this->em->getRepository(Share::class)->findBy(['file' => $file]);
+        foreach ($shares as $share) {
+            $this->em->remove($share);
+        }
+
+        // 2. Supprimer physiquement le fichier sur le disque
         $this->fileStorage->deleteFile($file);
 
-        // Supprimer de la base
+        // 3. Supprimer la ligne en base
         $this->em->remove($file);
         $this->em->flush();
 
-        // Libérer le quota
+        // 4. Libérer le quota
         $this->quotaManager->updateQuota($owner, -$size);
     }
 }

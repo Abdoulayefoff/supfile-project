@@ -8,14 +8,12 @@ use App\Entity\Share;
 use App\Entity\User;
 use App\Repository\ShareRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class ShareManager
 {
     public function __construct(
         private EntityManagerInterface $em,
         private ShareRepository $shareRepository,
-        private UserPasswordHasherInterface $passwordHasher,
     ) {}
 
     /**
@@ -42,9 +40,9 @@ class ShareManager
         }
 
         if ($password !== null) {
-            // On hash le mot de passe avec un objet temporaire
-            $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-            $share->setPassword($hashedPassword);
+            // password_hash/password_verify est le standard PHP pour les mots de passe
+            // d'accès à une ressource (≠ mots de passe utilisateur gérés par Symfony)
+            $share->setPassword(password_hash($password, PASSWORD_BCRYPT));
         }
 
         $this->em->persist($share);

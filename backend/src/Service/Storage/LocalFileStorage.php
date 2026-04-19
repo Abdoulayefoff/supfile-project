@@ -27,7 +27,12 @@ class LocalFileStorage implements FileStorageInterface
         $userDir = $this->storagePath . '/' . $owner->getId();
         $this->ensureDirectoryExists($userDir);
 
-        $filename = uniqid() . '_' . $uploadedFile->getClientOriginalName();
+        // bin2hex(random_bytes) : imprévisible, contrairement à uniqid() basé sur le timestamp
+        // Le nom client est conservé pour le display name mais isolé dans le nom stocké
+        $randomPrefix   = bin2hex(random_bytes(16));
+        $safeClientName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $uploadedFile->getClientOriginalName());
+        $filename        = $randomPrefix . '_' . $safeClientName;
+
         $uploadedFile->move($userDir, $filename);
 
         return $userDir . '/' . $filename;
