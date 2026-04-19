@@ -37,7 +37,7 @@ class UserController extends AbstractController
         /** @var User $user */
         $user = $this->getUser();
 
-        return $this->json($this->formatUser($user));
+        return $this->json(['user' => $this->formatUser($user)]);
     }
 
     /**
@@ -78,12 +78,15 @@ class UserController extends AbstractController
         }
 
         if (isset($data['theme'])) {
+            if (!in_array($data['theme'], ['light', 'dark'], true)) {
+                return $this->json(['error' => 'Valeur de thème invalide. Valeurs autorisées : light, dark'], Response::HTTP_BAD_REQUEST);
+            }
             $user->setTheme($data['theme']);
         }
 
         $this->em->flush();
 
-        $response = $this->formatUser($user);
+        $response = ['user' => $this->formatUser($user)];
 
         // Si l'email a changé, on génère un nouveau token JWT pour éviter l'invalidation
         if ($emailChanged) {
@@ -116,7 +119,7 @@ class UserController extends AbstractController
         if (!$this->passwordHasher->isPasswordValid($user, $data['currentPassword'])) {
             return $this->json(
                 ['error' => 'Mot de passe actuel incorrect'],
-                Response::HTTP_UNAUTHORIZED
+                Response::HTTP_BAD_REQUEST
             );
         }
 
@@ -174,19 +177,19 @@ class UserController extends AbstractController
 
         // Supprimer l'ancien avatar si existant
         if ($user->getAvatar()) {
-            $oldPath = '/var/www/html/storage/avatars/' . $user->getAvatar();
+            $oldPath = '/var/www/html/public/storage/avatars/' . $user->getAvatar();
             if (file_exists($oldPath)) {
                 unlink($oldPath);
             }
         }
 
-        // Sauvegarder le nouvel avatar
-        $avatarDir = '/var/www/html/storage/avatars/';
+        // Sauvegarder le nouvel avatar dans le répertoire public (accessible directement par le navigateur)
+        $avatarDir = '/var/www/html/public/storage/avatars/';
         if (!is_dir($avatarDir)) {
             mkdir($avatarDir, 0755, true);
         }
 
-        $filename = uniqid() . '_' . $user->getId() . '.' . $file->guessExtension();
+        $filename = bin2hex(random_bytes(16)) . '_' . $user->getId() . '.' . $file->guessExtension();
         $file->move($avatarDir, $filename);
 
         $user->setAvatar($filename);
@@ -194,7 +197,7 @@ class UserController extends AbstractController
 
         return $this->json([
             'message' => 'Avatar mis à jour avec succès',
-            'avatar' => $filename,
+            'user'    => $this->formatUser($user),
         ]);
     }
 
@@ -209,7 +212,7 @@ class UserController extends AbstractController
             'firstName' => $user->getFirstName(),
             'lastName' => $user->getLastName(),
             'fullName' => $user->getFullName(),
-            'avatar' => $user->getAvatar(),
+            'avatar' => $user->getAvatar() ? '/storage/avatars/' . $user->getAvatar() : null,
             'quotaUsed' => $user->getQuotaUsed(),
             'quotaLimit' => $user->getQuotaLimit(),
             'quotaPercentage' => $user->getQuotaPercentage(),

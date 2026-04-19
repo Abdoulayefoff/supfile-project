@@ -34,9 +34,9 @@ security:
             pattern: ^/docs
             security: false
 
-        # Firewall pour les routes publiques (partage public, etc.)
+        # Firewall pour les routes publiques (partage public, légal, etc.)
         public:
-            pattern: ^/api/(public|shares/public)
+            pattern: ^/api/(public|shares/public|legal)
             stateless: true
             security: false
 
@@ -59,6 +59,7 @@ security:
         - { path: ^/api/auth/oauth, roles: PUBLIC_ACCESS }  # Routes OAuth (Google, GitHub, Microsoft)
         - { path: ^/api/public, roles: PUBLIC_ACCESS }
         - { path: ^/api/shares/public, roles: PUBLIC_ACCESS }
+        - { path: ^/api/legal, roles: PUBLIC_ACCESS }
         - { path: ^/api/doc, roles: PUBLIC_ACCESS }
         # Toutes les autres routes API nécessitent une authentification
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
