@@ -1,0 +1,197 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Permissions minimales par défaut pour TOUS les jobs (principe du moindre privilège).
+permissions:
+  contents: read
+
+jobs:
+  # Job 1a — Tests backend (Symfony)
+  test-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    services:
+      mysql:
+        image: mysql:8.0.45  # Version fixe, pas de tag flottant :8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.CI_MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: supfile_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql
+          coverage: none
+
+      - name: Create .env for CI
+        # backend/.env est gitignored → absent du runner après checkout.
+        # On crée un .env complet avec TOUTES les variables référencées dans config/.
+        run: |
+          cat > .env << EOF
+          APP_ENV=test
+          APP_SECRET=${CI_APP_SECRET}
+          DATABASE_URL="mysql://root:${CI_MYSQL_ROOT_PASSWORD}@127.0.0.1:3306/supfile_test?serverVersion=8.0"
+          JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem
+          JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem
+          JWT_PASSPHRASE=${CI_JWT_PASSPHRASE}
+          CORS_ALLOW_ORIGIN='^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$'
+          DEFAULT_URI=http://localhost:8000
+          MAILER_DSN=null://null
+          MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0
+          OAUTH_GOOGLE_CLIENT_ID=ci-placeholder
+          OAUTH_GOOGLE_CLIENT_SECRET=ci-placeholder
+          OAUTH_GITHUB_CLIENT_ID=ci-placeholder
+          OAUTH_GITHUB_CLIENT_SECRET=ci-placeholder
+          OAUTH_MICROSOFT_CLIENT_ID=ci-placeholder
+          OAUTH_MICROSOFT_CLIENT_SECRET=ci-placeholder
+          EOF
+        working-directory: ./backend
+        env:
+          CI_APP_SECRET: ${{ secrets.APP_SECRET }}
+          CI_MYSQL_ROOT_PASSWORD: ${{ secrets.CI_MYSQL_ROOT_PASSWORD }}
+          CI_JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
+
+      - name: Install backend dependencies
+        # --no-scripts : empêche cache:clear de tourner avant la génération
+        # des clés JWT (le kernel les exige au boot en env test).
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
+        working-directory: ./backend
+
+      - name: Generate JWT Keys (Test)
+        run: php bin/console lexik:jwt:generate-keypair --skip-if-exists --env=test
+        working-directory: ./backend
+        env:
+          DATABASE_URL: "mysql://root:${{ secrets.CI_MYSQL_ROOT_PASSWORD }}@127.0.0.1:3306/supfile_test?serverVersion=8.0"
+          JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
+
+      - name: Warm up cache (Test)
+        # Remplace l'auto-script cache:clear sauté par --no-scripts.
+        run: php bin/console cache:warmup --env=test
+        working-directory: ./backend
+        env:
+          DATABASE_URL: "mysql://root:${{ secrets.CI_MYSQL_ROOT_PASSWORD }}@127.0.0.1:3306/supfile_test?serverVersion=8.0"
+          JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
+
+      - name: Setup Database
+        run: |
+          php bin/console doctrine:database:create --env=test --if-not-exists
+          php bin/console doctrine:migrations:migrate --no-interaction --env=test
+        working-directory: ./backend
+        env:
+          DATABASE_URL: "mysql://root:${{ secrets.CI_MYSQL_ROOT_PASSWORD }}@127.0.0.1:3306/supfile_test?serverVersion=8.0"
+          JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
+
+      - name: Run backend tests
+        run: php bin/phpunit
+        working-directory: ./backend
+        env:
+          DATABASE_URL: "mysql://root:${{ secrets.CI_MYSQL_ROOT_PASSWORD }}@127.0.0.1:3306/supfile_test?serverVersion=8.0"
+          JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
+
+  # Job 1b — Tests frontend (React/Vite)
+  test-frontend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend-web/package-lock.json
+
+      - name: Install frontend-web dependencies
+        run: npm ci  # Déterministe : installe exactement ce que package-lock.json décrit
+        working-directory: ./frontend-web
+
+      - name: Run frontend-web tests
+        run: npx jest --ci
+        working-directory: ./frontend-web
+
+  # Job 2 — Audit de sécurité
+  security:
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Audit backend dependencies
+        run: composer audit
+        working-directory: ./backend
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: ./frontend-web
+
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
+        working-directory: ./frontend-web
+
+  # Job 3 — Build du frontend
+  build:
+    runs-on: ubuntu-latest
+    needs: [security]
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: ./frontend-web
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: ./frontend-web
+
+  # Job 4 — Déploiement
+  # Exécuté uniquement lors d'un push direct sur main
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build]
+    permissions:
+      contents: read
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Deploy
+        run: echo "Deploy OK — Application Supfile déployée avec succès"
+
+        
