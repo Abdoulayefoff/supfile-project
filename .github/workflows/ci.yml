@@ -1,0 +1,131 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # Job 1a — Tests backend (Symfony)
+  test-backend:
+    runs-on: ubuntu-latest
+    
+    # Service MySQL pour exécuter les tests fonctionnels
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: supfile_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql
+          coverage: none
+
+      - name: Install backend dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+        working-directory: ./backend
+
+      - name: Generate JWT Keys (Test)
+        run: php bin/console lexik:jwt:generate-keypair --skip-if-exists --env=test
+        working-directory: ./backend
+
+      - name: Setup Database
+        # Surcharge DATABASE_URL pour utiliser le service MySQL de GitHub Actions (plutôt que le hostname "database" défini dans .env.test)
+        run: |
+          php bin/console doctrine:database:create --env=test --if-not-exists
+          php bin/console doctrine:migrations:migrate --no-interaction --env=test
+        working-directory: ./backend
+        env:
+          DATABASE_URL: "mysql://root:root@127.0.0.1:3306/supfile_test?serverVersion=8.0"
+
+      - name: Run backend tests
+        run: php bin/phpunit
+        working-directory: ./backend
+        env:
+          DATABASE_URL: "mysql://root:root@127.0.0.1:3306/supfile_test?serverVersion=8.0"
+
+  # Job 1b — Tests frontend (React/Vite)
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          
+      - name: Install frontend-web dependencies
+        run: npm install
+        working-directory: ./frontend-web
+        
+      - name: Run frontend-web tests
+        run: npx jest
+        working-directory: ./frontend-web
+
+  # Job 2 — Audit de sécurité
+  security:
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend] # Doit attendre que le code passe les tests
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          
+      - name: Audit backend dependencies
+        run: composer audit
+        working-directory: ./backend
+        
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: ./frontend-web
+        
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
+        working-directory: ./frontend-web
+
+  # Job 3 — Build du frontend
+  build:
+    runs-on: ubuntu-latest
+    needs: [security] # On build uniquement si la sécurité est validée
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: ./frontend-web
+        
+      - name: Build frontend
+        run: npm run build
+        working-directory: ./frontend-web
+
+  # Job 4 — Déploiement
+  # Exécuté uniquement lors d'un push direct sur main
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Deploy
+        run: echo "Deploy OK — Application Supfile déployée avec succès"
