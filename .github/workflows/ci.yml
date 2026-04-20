@@ -41,16 +41,21 @@ jobs:
           extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql
           coverage: none
 
-      - name: Create .env.local for CI
-        # Les secrets sont passés via des variables d'environnement shell ($VAR),
-        # PAS interpolés directement dans le heredoc (${{ secrets.X }}).
-        # Raison : avec des env vars shell, GitHub masque les valeurs dans les logs.
+      - name: Create .env for CI
+        # backend/.env est gitignored (ligne 11 du .gitignore racine) → absent du runner après checkout.
+        # Symfony bootEnv() exige que .env existe (ou .env.dist) sinon il lève PathException.
+        # Note : .env.local est ignoré par Symfony en mode APP_ENV=test (comportement by design).
+        # Les secrets sont injectés via des variables shell, pas interpolés dans le heredoc,
+        # pour qu'ils restent masqués dans les logs GitHub Actions.
         run: |
-          cat > .env.local << EOF
+          cat > .env << EOF
           APP_ENV=test
           APP_SECRET=${CI_APP_SECRET}
           DATABASE_URL="mysql://root:${CI_MYSQL_ROOT_PASSWORD}@127.0.0.1:3306/supfile_test?serverVersion=8.0"
+          JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem
+          JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem
           JWT_PASSPHRASE=${CI_JWT_PASSPHRASE}
+          CORS_ALLOW_ORIGIN='^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$'
           EOF
         working-directory: ./backend
         env:
