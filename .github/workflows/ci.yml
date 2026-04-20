@@ -42,11 +42,8 @@ jobs:
           coverage: none
 
       - name: Create .env for CI
-        # backend/.env est gitignored (ligne 11 du .gitignore racine) → absent du runner après checkout.
-        # Symfony bootEnv() exige que .env existe (ou .env.dist) sinon il lève PathException.
-        # Note : .env.local est ignoré par Symfony en mode APP_ENV=test (comportement by design).
-        # Les secrets sont injectés via des variables shell, pas interpolés dans le heredoc,
-        # pour qu'ils restent masqués dans les logs GitHub Actions.
+        # backend/.env est gitignored → absent du runner après checkout.
+        # On crée un .env complet avec TOUTES les variables référencées dans config/.
         run: |
           cat > .env << EOF
           APP_ENV=test
@@ -56,6 +53,15 @@ jobs:
           JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem
           JWT_PASSPHRASE=${CI_JWT_PASSPHRASE}
           CORS_ALLOW_ORIGIN='^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$'
+          DEFAULT_URI=http://localhost:8000
+          MAILER_DSN=null://null
+          MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0
+          OAUTH_GOOGLE_CLIENT_ID=ci-placeholder
+          OAUTH_GOOGLE_CLIENT_SECRET=ci-placeholder
+          OAUTH_GITHUB_CLIENT_ID=ci-placeholder
+          OAUTH_GITHUB_CLIENT_SECRET=ci-placeholder
+          OAUTH_MICROSOFT_CLIENT_ID=ci-placeholder
+          OAUTH_MICROSOFT_CLIENT_SECRET=ci-placeholder
           EOF
         working-directory: ./backend
         env:
