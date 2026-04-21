@@ -40,3 +40,8 @@ export const useLogout = () => {
 
 /** URL OAuth pour un provider donné. */
 export const getOAuthUrl = authService.getOAuthUrl;
+
+/** Redirige vers une URL (abstrait pour faciliter les tests) */
+export const redirectToUrl = (url: string) => {
+    window.location.assign(url);
+};

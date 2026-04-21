@@ -241,15 +241,52 @@ mobile-web: ## Lance l'app Expo dans le navigateur (local)
 
 #  QUALITÉ — TESTS & LINT
 
+.PHONY: test-setup
+test-setup: ## Crée la base de données de test (à faire une seule fois après clone)
+	@echo "$(CYAN)▶ Création de la base de données de test...$(RESET)"
+	@ROOT_PWD=$$(grep MYSQL_ROOT_PASSWORD .env | cut -d= -f2); \
+	$(DB) mysql -uroot -p$$ROOT_PWD \
+		-e "CREATE DATABASE IF NOT EXISTS supfile_db_test; \
+		    GRANT ALL PRIVILEGES ON supfile_db_test.* TO 'supfile_user'@'%'; \
+		    FLUSH PRIVILEGES;" 2>/dev/null || true
+	@echo "$(GREEN)✔ Base de données supfile_db_test prête$(RESET)"
+
 .PHONY: test
-test: ## Lance tous les tests PHPUnit du backend
+test: test-backend test-frontend-web ## Lance tous les tests (backend + frontend-web)
+
+.PHONY: test-backend
+test-backend: test-setup ## Lance tous les tests PHPUnit du backend
 	@echo "$(CYAN)▶ Lancement des tests PHPUnit...$(RESET)"
 	@$(API) php bin/phpunit
-	@echo "$(GREEN)✔ Tests terminés$(RESET)"
+	@echo "$(GREEN)✔ Tests backend terminés$(RESET)"
+
+.PHONY: test-frontend-web
+test-frontend-web: ## Lance tous les tests Jest du frontend web (local)
+	@echo "$(CYAN)▶ Lancement des tests Jest (frontend-web)...$(RESET)"
+	@cd frontend-web && npx jest --clearCache > /dev/null 2>&1; npx jest --no-coverage
+	@echo "$(GREEN)✔ Tests frontend-web terminés$(RESET)"
+
+.PHONY: test-frontend-web-coverage
+test-frontend-web-coverage: ## Lance les tests Jest avec rapport de couverture
+	@echo "$(CYAN)▶ Tests Jest avec couverture (frontend-web)...$(RESET)"
+	@cd frontend-web && npx jest --coverage
+	@echo "$(GREEN)✔ Rapport disponible dans frontend-web/coverage/$(RESET)"
+
+.PHONY: test-unit
+test-unit: ## Lance uniquement les tests unitaires backend
+	@echo "$(CYAN)▶ Tests unitaires backend...$(RESET)"
+	@$(API) php bin/phpunit tests/Unit/ --testdox
+	@echo "$(GREEN)✔ Tests unitaires terminés$(RESET)"
+
+.PHONY: test-functional
+test-functional: test-setup ## Lance uniquement les tests fonctionnels backend
+	@echo "$(CYAN)▶ Tests fonctionnels backend...$(RESET)"
+	@$(API) php bin/phpunit tests/Functional/ --testdox
+	@echo "$(GREEN)✔ Tests fonctionnels terminés$(RESET)"
 
 .PHONY: test-coverage
-test-coverage: ## Lance les tests avec rapport de couverture HTML
-	@echo "$(CYAN)▶ Tests avec couverture de code...$(RESET)"
+test-coverage: test-setup ## Lance les tests backend avec rapport de couverture HTML
+	@echo "$(CYAN)▶ Tests backend avec couverture de code...$(RESET)"
 	@$(API) php bin/phpunit --coverage-html var/coverage
 	@echo "$(GREEN)✔ Rapport disponible dans backend/var/coverage/index.html$(RESET)"
 

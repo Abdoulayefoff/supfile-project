@@ -100,7 +100,7 @@ jobs:
           JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
 
       - name: Run backend tests
-        run: php bin/phpunit
+        run: php bin/phpunit --fail-on-empty-test-suite
         working-directory: ./backend
         env:
           DATABASE_URL: "mysql://root:${{ secrets.CI_MYSQL_ROOT_PASSWORD }}@127.0.0.1:3306/supfile_test?serverVersion=8.0"
@@ -118,11 +118,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: frontend-web/package-lock.json
 
       - name: Install frontend-web dependencies
-        run: npm ci  # Déterministe : installe exactement ce que package-lock.json décrit
+        run: npm install
         working-directory: ./frontend-web
 
       - name: Run frontend-web tests
@@ -153,7 +151,7 @@ jobs:
           node-version: '22'
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: npm install
         working-directory: ./frontend-web
 
       - name: Audit frontend dependencies
@@ -175,7 +173,7 @@ jobs:
           node-version: '22'
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: npm install
         working-directory: ./frontend-web
 
       - name: Build frontend
