@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { getOAuthUrl } from '@/hooks/useAuth';
+import { getOAuthUrl, redirectToUrl } from '@/hooks/useAuth';
 
 // ── Style commun à tous les boutons OAuth 
 const oauthButtonStyle: React.CSSProperties = {
@@ -27,7 +27,7 @@ export const OAuthButtons = (): ReactElement => {
             {/* ── Bouton Google ── */}
             <button
                 type="button"
-                onClick={() => window.location.href = getOAuthUrl('google')}
+                onClick={() => redirectToUrl(getOAuthUrl('google'))}
                 style={oauthButtonStyle}
                 onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f5'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
@@ -44,7 +44,7 @@ export const OAuthButtons = (): ReactElement => {
             {/* ── Bouton GitHub ── */}
             <button
                 type="button"
-                onClick={() => window.location.href = getOAuthUrl('github')}
+                onClick={() => redirectToUrl(getOAuthUrl('github'))}
                 style={oauthButtonStyle}
                 onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f5'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
@@ -58,7 +58,7 @@ export const OAuthButtons = (): ReactElement => {
             {/* ── Bouton Microsoft ── */}
             <button
                 type="button"
-                onClick={() => window.location.href = getOAuthUrl('microsoft')}
+                onClick={() => redirectToUrl(getOAuthUrl('microsoft'))}
                 style={oauthButtonStyle}
                 onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f5'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'white'}

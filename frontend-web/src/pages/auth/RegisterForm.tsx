@@ -149,7 +149,7 @@ export const RegisterForm = ({ onSwitchMode }: RegisterFormProps): ReactElement 
                             <input
                                 {...register('firstName')}
                                 type="text"
-                                placeholder="Jean"
+                                placeholder="Abdoulaye"
                                 className="sf-input"
                                 style={inputStyle}
                                 autoComplete="given-name"
@@ -168,7 +168,7 @@ export const RegisterForm = ({ onSwitchMode }: RegisterFormProps): ReactElement 
                             <input
                                 {...register('lastName')}
                                 type="text"
-                                placeholder="Dupont"
+                                placeholder="Fofana"
                                 className="sf-input"
                                 style={inputStyle}
                                 autoComplete="family-name"
