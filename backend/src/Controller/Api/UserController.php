@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -25,6 +26,7 @@ class UserController extends AbstractController
         private UserManager $userManager,
         private UserRepository $userRepository,
         private JWTTokenManagerInterface $jwtManager,
+        #[Autowire('%kernel.project_dir%')] private string $projectDir,
     ) {}
 
     /**
@@ -177,14 +179,14 @@ class UserController extends AbstractController
 
         // Supprimer l'ancien avatar si existant
         if ($user->getAvatar()) {
-            $oldPath = '/var/www/html/public/storage/avatars/' . $user->getAvatar();
+            $oldPath = $this->projectDir . '/public/storage/avatars/' . $user->getAvatar();
             if (file_exists($oldPath)) {
                 unlink($oldPath);
             }
         }
 
         // Sauvegarder le nouvel avatar dans le répertoire public (accessible directement par le navigateur)
-        $avatarDir = '/var/www/html/public/storage/avatars/';
+        $avatarDir = $this->projectDir . '/public/storage/avatars/';
         if (!is_dir($avatarDir)) {
             mkdir($avatarDir, 0755, true);
         }

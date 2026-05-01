@@ -144,7 +144,7 @@ abstract class AbstractFunctionalTest extends WebTestCase
         string $mimeType = 'text/plain',
         ?Folder $folder = null
     ): File {
-        $storageDir = '/var/www/html/storage/test_' . $owner->getId();
+        $storageDir = sys_get_temp_dir() . '/supfile_test_' . $owner->getId();
         if (!is_dir($storageDir)) {
             mkdir($storageDir, 0755, true);
         }

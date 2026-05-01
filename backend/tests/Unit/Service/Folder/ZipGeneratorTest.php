@@ -12,22 +12,14 @@ use PHPUnit\Framework\TestCase;
 /**
  * Tests unitaires de ZipGenerator.
  *
- * Note : ZipGenerator::generateFolderZip() écrit physiquement dans /var/www/html/var/tmp
- * (chemin hardcodé pour l'environnement Docker du projet).
- * Les tests qui assertent l'existence physique du fichier sont skippés si le
- * répertoire cible n'est pas accessible (environnement local hors Docker).
- *
- * Les tests de délégation aux repositories (appels findBy) s'exécutent dans
- * tous les environnements.
+ * ZipGenerator::generateFolderZip() écrit dans sys_get_temp_dir() (portable,
+ * fonctionne en local, CI et Docker).
  */
 class ZipGeneratorTest extends TestCase
 {
     private FileRepository&MockObject $fileRepository;
     private FolderRepository&MockObject $folderRepository;
     private ZipGenerator $zipGenerator;
-
-    /** Chemin hardcodé dans le service source */
-    private const ZIP_TMP_DIR = '/var/www/html/var/tmp';
 
     protected function setUp(): void
     {
@@ -43,27 +35,13 @@ class ZipGeneratorTest extends TestCase
         return $folder;
     }
 
-    /**
-     * Vérifie si l'environnement Docker est disponible (répertoire tmp accessible).
-     */
-    private function skipIfNotDocker(): void
-    {
-        if (!is_dir(self::ZIP_TMP_DIR) || !is_writable(self::ZIP_TMP_DIR)) {
-            $this->markTestSkipped(
-                'ZipGenerator écrit dans ' . self::ZIP_TMP_DIR . ' (chemin Docker). '
-                . 'Test ignoré hors environnement Docker.'
-            );
-        }
-    }
-
-    // ─── Tests de délégation aux repositories (tous environnements)
+    // ─── Tests de délégation aux repositories
 
     /**
      * @requires extension zip
      */
     public function testGenerateFolderZipQueriesFilesForFolder(): void
     {
-        $this->skipIfNotDocker();
         $folder = $this->buildFolder('QueryTest');
 
         $this->fileRepository
@@ -88,7 +66,6 @@ class ZipGeneratorTest extends TestCase
      */
     public function testGenerateFolderZipQueriesSubFolders(): void
     {
-        $this->skipIfNotDocker();
         $folder = $this->buildFolder('Parent');
 
         $this->fileRepository->method('findBy')->willReturn([]);
@@ -111,7 +88,6 @@ class ZipGeneratorTest extends TestCase
      */
     public function testGenerateFolderZipSkipsDeletedFiles(): void
     {
-        $this->skipIfNotDocker();
         $folder = $this->buildFolder('FolderWithDeletedFiles');
 
         // Le repository ne renvoie QUE les fichiers non supprimés (isDeleted = false)
@@ -132,14 +108,13 @@ class ZipGeneratorTest extends TestCase
         }
     }
 
-    // ─── Tests de création physique du ZIP (environnement Docker uniquement)
+    // ─── Tests de création physique du ZIP
 
     /**
      * @requires extension zip
      */
     public function testGenerateFolderZipReturnsStringPath(): void
     {
-        $this->skipIfNotDocker();
         $folder = $this->buildFolder('TestFolder');
 
         $this->fileRepository->method('findBy')->willReturn([]);
@@ -161,7 +136,6 @@ class ZipGeneratorTest extends TestCase
      */
     public function testGenerateFolderZipCreatesPhysicalFile(): void
     {
-        $this->skipIfNotDocker();
         $folder = $this->buildFolder('MyFolder');
 
         $this->fileRepository->method('findBy')->willReturn([]);
@@ -181,7 +155,6 @@ class ZipGeneratorTest extends TestCase
      */
     public function testGenerateFolderZipWithFolderNameContainingSpaces(): void
     {
-        $this->skipIfNotDocker();
         $folder = $this->buildFolder('My Important Documents');
 
         $this->fileRepository->method('findBy')->willReturn([]);
@@ -196,16 +169,18 @@ class ZipGeneratorTest extends TestCase
         }
     }
 
-    // ─── Cas limites — sans accès filesystem 
+    // ─── Cas limites
 
     public function testZipGeneratorIsInstantiable(): void
     {
         $this->assertInstanceOf(ZipGenerator::class, $this->zipGenerator);
     }
 
+    /**
+     * @requires extension zip
+     */
     public function testFileRepositoryIsCalledWithCorrectIsDeletedFlag(): void
     {
-        $this->skipIfNotDocker();
         $folder = $this->buildFolder('Test');
 
         // isDeleted doit strictement être false (bool), pas 0 ou null
