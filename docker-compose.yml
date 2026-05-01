@@ -9,9 +9,9 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "3307:3306"  # Port externe 3307 pour éviter conflit avec MySQL local
+      - "3307:3306"
     volumes:
-      - mysql_data:/var/lib/mysql  # Volume persistant pour les données
+      - mysql_data:/var/lib/mysql
     networks:
       - supfile_network
     healthcheck:
@@ -29,9 +29,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/var/www/html  # Montage du code source pour le développement
-      - storage_data:/var/www/html/storage  # Volume persistant pour les fichiers uploadés
-      - ./docs:/var/www/docs  # Montage de la documentation
+      - ./backend:/var/www/html
+      - storage_data:/var/www/html/storage
+      - ./docs:/var/www/docs
     environment:
       DATABASE_URL: "mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@database:3306/${MYSQL_DATABASE}?serverVersion=8.0"
       APP_ENV: ${APP_ENV}
@@ -49,7 +49,7 @@ services:
       MESSENGER_TRANSPORT_DSN: ${MESSENGER_TRANSPORT_DSN:-doctrine://default}
     depends_on:
       database:
-        condition: service_healthy  # Attendre que MySQL soit prêt
+        condition: service_healthy
     networks:
       - supfile_network
 
@@ -62,23 +62,42 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend-web:/app  # Montage du code source pour le hot reload
-      - /app/node_modules  # Volume anonyme pour éviter l'écrasement des node_modules
+      - ./frontend-web:/app
+      - /app/node_modules
     environment:
       VITE_API_URL: ${VITE_API_URL}
     depends_on:
-      - api  # Attendre que l'API soit démarrée
+      - api
     networks:
       - supfile_network
 
-# Volumes Docker pour la persistance des données
+  # Service Frontend Mobile Expo
+  mobile:
+    build:
+      context: ./frontend-mobile
+      dockerfile: Dockerfile
+    container_name: supfile_mobile
+    ports:
+      - "8082:8081"
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
+    volumes:
+      - ./frontend-mobile:/app
+      - /app/node_modules
+    environment:
+      EXPO_PUBLIC_API_URL: http://192.168.0.15:8000/api
+    depends_on:
+      - api
+    networks:
+      - supfile_network
+
 volumes:
-  mysql_data:      # Persiste les données MySQL entre les redémarrages
+  mysql_data:
     driver: local
-  storage_data:    # Persiste les fichiers uploadés entre les redémarrages
+  storage_data:
     driver: local
 
-# Réseau Docker pour la communication entre services
 networks:
   supfile_network:
     driver: bridge
