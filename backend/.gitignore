@@ -24,4 +24,5 @@
 /var/cache/
 /var/log/
 /var/sessions/
+/var/*.db
 !/var/tmp/

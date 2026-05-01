@@ -151,7 +151,8 @@ class OAuthController extends AbstractController
     {
         return $this->clientRegistry
             ->getClient('microsoft')
-            ->redirect(['openid', 'email', 'profile'], []);
+            // User.Read est requis par Microsoft Graph pour l'endpoint /me
+            ->redirect(['openid', 'email', 'profile', 'User.Read'], []);
     }
 
     /**
@@ -167,7 +168,8 @@ class OAuthController extends AbstractController
             return new RedirectResponse($redirectUri . '?token=' . $result['token']);
         } catch (\Exception $e) {
             $redirectUri = $this->resolveRedirectUri($request);
-            return new RedirectResponse($redirectUri . '?error=' . urlencode($e->getMessage()));
+            // Message d'erreur détaillé pour le debug (à retirer en prod)
+            return new RedirectResponse($redirectUri . '?error=oauth_failed&detail=' . urlencode($e->getMessage()));
         }
     }
 
