@@ -40,6 +40,7 @@ jobs:
           php-version: '8.3'
           extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql
           coverage: none
+          ini-values: upload_max_filesize=128M, post_max_size=128M
 
       - name: Create .env for CI
         # backend/.env est gitignored → absent du runner après checkout.
