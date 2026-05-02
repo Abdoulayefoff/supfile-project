@@ -10,6 +10,7 @@ use League\OAuth2\Client\Provider\GoogleUser;
 use League\OAuth2\Client\Provider\GithubResourceOwner;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class OAuthService
 {
@@ -18,7 +19,9 @@ class OAuthService
         private UserRepository $userRepository,
         private UserPasswordHasherInterface $passwordHasher,
         private JWTTokenManagerInterface $jwtManager,
-        private ClientRegistry $clientRegistry
+        private ClientRegistry $clientRegistry,
+        private \Psr\Log\LoggerInterface $logger,
+        private HttpClientInterface $httpClient,
     ) {
     }
 
@@ -115,50 +118,74 @@ class OAuthService
 
     /**
      * Gère l'authentification Microsoft OAuth
+     *
+     * stevenmaguire/oauth2-microsoft passe le token dans l'URL (?access_token=...)
+     * mais Microsoft Graph API /v1.0/me n'accepte plus ce mode depuis 2021.
+     * On échange le code soi-même puis on appelle Graph API avec Authorization: Bearer.
      */
     public function handleMicrosoftAuth(): array
     {
         $client = $this->clientRegistry->getClient('microsoft');
-        
-        $microsoftUser = $client->fetchUser();
-        
-        // Récupérer les données utilisateur
-        $microsoftData = $microsoftUser->toArray();
-        $email = $microsoftData['mail'] ?? $microsoftData['userPrincipalName'] ?? null;
-        $oauthId = $microsoftUser->getId();
-        
-        // Microsoft retourne le nom complet dans 'displayName'
-        $displayName = $microsoftData['displayName'] ?? '';
-        $firstName = $microsoftData['givenName'] ?? null;
-        $lastName = $microsoftData['surname'] ?? null;
-        
-        // Si firstName et lastName ne sont pas disponibles, les extraire du displayName
-        if (!$firstName && !$lastName && $displayName) {
-            $nameParts = explode(' ', $displayName, 2);
-            $firstName = $nameParts[0] ?? null;
-            $lastName = $nameParts[1] ?? null;
+
+        try {
+            $accessToken = $client->getAccessToken();
+        } catch (\Exception $e) {
+            $this->logger->error('Microsoft OAuth token exchange failed', [
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+            ]);
+            throw $e;
         }
-        
+
+        try {
+            $response = $this->httpClient->request('GET', 'https://graph.microsoft.com/v1.0/me', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $accessToken->getToken(),
+                    'Accept'        => 'application/json',
+                ],
+            ]);
+            $microsoftData = $response->toArray();
+        } catch (\Exception $e) {
+            $this->logger->error('Microsoft Graph API call failed', [
+                'error' => $e->getMessage(),
+            ]);
+            throw new \Exception('Failed to fetch Microsoft user profile: ' . $e->getMessage());
+        }
+
+        $email    = $microsoftData['mail'] ?? $microsoftData['userPrincipalName'] ?? null;
+        $oauthId  = $microsoftData['id'] ?? null;
+
+        $firstName = $microsoftData['givenName'] ?? null;
+        $lastName  = $microsoftData['surname'] ?? null;
+
+        if (!$firstName && !$lastName && !empty($microsoftData['displayName'])) {
+            $nameParts = explode(' ', $microsoftData['displayName'], 2);
+            $firstName = $nameParts[0] ?? null;
+            $lastName  = $nameParts[1] ?? null;
+        }
+
         if (!$email) {
             throw new \Exception('Email is required for OAuth authentication');
         }
-        
-        // Trouver ou créer l'utilisateur
+
+        if (!$oauthId) {
+            throw new \Exception('Microsoft user ID not found in Graph API response');
+        }
+
         $user = $this->findOrCreateOAuthUser(
             email: $email,
             oauthProvider: 'microsoft',
             oauthId: $oauthId,
             firstName: $firstName,
             lastName: $lastName,
-            avatar: null // Microsoft ne fournit pas d'avatar par défaut
+            avatar: null
         );
-        
-        // Générer le token JWT
+
         $token = $this->jwtManager->create($user);
-        
+
         return [
             'token' => $token,
-            'user' => $user
+            'user'  => $user,
         ];
     }
 

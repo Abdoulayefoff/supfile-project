@@ -117,6 +117,10 @@ backend/storage/*
 backend/public/uploads/avatars/*
 !backend/public/uploads/avatars/.gitkeep
 
+# Storage public (avatars, fichiers utilisateurs)
+backend/public/storage/*
+!backend/public/storage/.gitkeep
+
 # --- Tests ---
 coverage/
 .nyc_output/

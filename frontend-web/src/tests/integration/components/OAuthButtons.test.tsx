@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { OAuthButtons } from '@/components/ui/OAuthButtons';
 import { redirectToUrl } from '@/hooks/useAuth';
