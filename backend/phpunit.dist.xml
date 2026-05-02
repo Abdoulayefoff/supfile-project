@@ -13,13 +13,17 @@
     <php>
         <ini name="display_errors" value="1" />
         <ini name="error_reporting" value="-1" />
+        <ini name="upload_max_filesize" value="128M" />
+        <ini name="post_max_size" value="128M" />
         <server name="APP_ENV" value="test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
+        <server name="KERNEL_CLASS" value="App\Kernel" />
     </php>
 
     <testsuites>
         <testsuite name="Project Test Suite">
             <directory>tests</directory>
+            <exclude>tests/Functional/AbstractFunctionalTest.php</exclude>
         </testsuite>
     </testsuites>
 

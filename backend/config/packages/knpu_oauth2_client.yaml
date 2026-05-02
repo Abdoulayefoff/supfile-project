@@ -26,3 +26,8 @@ knpu_oauth2_client:
             redirect_route: api_oauth_microsoft_check
             redirect_params: {}
             use_state: true
+            # 'tenant' n'est pas une option valide dans knpu → on passe les URLs explicitement.
+            # /common/ = accepte comptes perso ET pro/école Microsoft.
+            url_authorize: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
+            url_access_token: 'https://login.microsoftonline.com/common/oauth2/v2.0/token'
+            url_resource_owner_details: 'https://graph.microsoft.com/v1.0/me'

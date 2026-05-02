@@ -23,7 +23,7 @@ class ZipGenerator
             throw new \RuntimeException('L\'extension PHP ZipArchive n\'est pas disponible');
         }
 
-        $tmpDir = '/var/www/html/var/tmp';
+        $tmpDir = sys_get_temp_dir();
         if (!is_dir($tmpDir)) {
             mkdir($tmpDir, 0755, true);
         }
