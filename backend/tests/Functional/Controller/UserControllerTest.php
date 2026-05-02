@@ -256,9 +256,13 @@ class UserControllerTest extends AbstractFunctionalTest
         $user  = $this->createUser('user@example.com', 'password123');
         $token = $this->getToken($user);
 
-        // Créer un faux fichier dépassant 2 Mo
-        $largeContent = str_repeat('x', 3 * 1024 * 1024);
-        $file = $this->createTempFile($largeContent, 'big.jpg', 'image/jpeg');
+        // GIF valide + padding null pour dépasser 2 Mo
+        // getMimeType() sniffe le contenu réel (pas le clientMimeType) — le header GIF
+        // garantit la détection 'image/gif', le check MIME passe, le check taille renvoie 400.
+        $gifHeader = base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+        $tmpPath   = tempnam(sys_get_temp_dir(), 'supfile_large_') . '.gif';
+        file_put_contents($tmpPath, $gifHeader . str_repeat("\x00", 3 * 1024 * 1024));
+        $file = new \Symfony\Component\HttpFoundation\File\UploadedFile($tmpPath, 'large.gif', 'image/gif', null, true);
 
         $this->client->request(
             'POST',
