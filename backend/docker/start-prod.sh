@@ -13,12 +13,21 @@ mkdir -p config/jwt
 if [ -n "$JWT_PRIVATE_KEY_BASE64" ] && [ -n "$JWT_PUBLIC_KEY_BASE64" ]; then
     echo "$JWT_PRIVATE_KEY_BASE64" | base64 -d > config/jwt/private.pem
     echo "$JWT_PUBLIC_KEY_BASE64"  | base64 -d > config/jwt/public.pem
-    chmod 600 config/jwt/private.pem
+    # PHP-FPM runs as www-data — it must be able to read the private key
+    chmod 640 config/jwt/private.pem
+    chmod 644 config/jwt/public.pem
+    chown www-data:www-data config/jwt/private.pem config/jwt/public.pem
     echo "    Clés JWT chargées depuis les variables d'environnement."
 elif [ ! -f config/jwt/private.pem ]; then
     php bin/console lexik:jwt:generate-keypair --env=prod
+    chown www-data:www-data config/jwt/private.pem config/jwt/public.pem
+    chmod 640 config/jwt/private.pem
+    chmod 644 config/jwt/public.pem
     echo "    AVERTISSEMENT : Clés JWT générées (éphémères)."
 else
+    chown www-data:www-data config/jwt/private.pem config/jwt/public.pem
+    chmod 640 config/jwt/private.pem
+    chmod 644 config/jwt/public.pem
     echo "    Clés JWT déjà présentes."
 fi
 
