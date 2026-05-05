@@ -1,28 +1,23 @@
 #!/bin/sh
 set -e
 
-# CLÉS JWT
-#
-# IMPORTANT : Les containers Azure App Service sont éphémères.
-# Si on génère les clés à chaque démarrage, tous les utilisateurs sont
-# déconnectés à chaque redéploiement (leurs tokens JWT deviennent invalides).
-#
-# Solution : stocker les clés en base64 dans les variables d'environnement
-# JWT_PRIVATE_KEY_BASE64 et JWT_PUBLIC_KEY_BASE64
+echo "==> Création du .env de production..."
+cat > /var/www/html/.env << EOF
+APP_ENV=prod
+APP_SECRET=${APP_SECRET}
+EOF
+
 echo "==> Configuration des clés JWT..."
 mkdir -p config/jwt
 
 if [ -n "$JWT_PRIVATE_KEY_BASE64" ] && [ -n "$JWT_PUBLIC_KEY_BASE64" ]; then
-    # Clés persistantes depuis les variables d'environnement (RECOMMANDÉ)
     echo "$JWT_PRIVATE_KEY_BASE64" | base64 -d > config/jwt/private.pem
     echo "$JWT_PUBLIC_KEY_BASE64"  | base64 -d > config/jwt/public.pem
     chmod 600 config/jwt/private.pem
     echo "    Clés JWT chargées depuis les variables d'environnement."
 elif [ ! -f config/jwt/private.pem ]; then
-    # Génération temporaire — les sessions seront perdues à chaque redémarrage
     php bin/console lexik:jwt:generate-keypair --env=prod
     echo "    AVERTISSEMENT : Clés JWT générées (éphémères)."
-    echo "    Configure JWT_PRIVATE_KEY_BASE64 et JWT_PUBLIC_KEY_BASE64 (voir guide section 10.3)."
 else
     echo "    Clés JWT déjà présentes."
 fi
