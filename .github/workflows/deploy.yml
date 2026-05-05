@@ -7,7 +7,7 @@
 #   3. security        → composer audit + npm audit + Trivy
 #   4. build           → Build frontend (vérification)
 #   5. deploy-backend  → Build image Docker + push ACR + update App Service
-#   6. deploy-frontend → Azure Static Web Apps
+#   6. deploy-frontend → Build image Docker frontend + push ACR + update App Service
 
 name: CI/CD Pipeline
 
@@ -17,14 +17,13 @@ on:
   pull_request:
     branches: [main]
 
-# Permissions minimales par défaut (principe du moindre privilège).
 permissions:
   contents: read
 
 env:
-  # À remplacer par le nom réel de l'ACR
   ACR_LOGIN_SERVER: supfileregistry.azurecr.io
   BACKEND_IMAGE: supfileregistry.azurecr.io/supfile-backend
+  FRONTEND_IMAGE: supfileregistry.azurecr.io/supfile-frontend
 
 jobs:
 
@@ -143,7 +142,7 @@ jobs:
         run: npx jest --ci
         working-directory: ./frontend-web
 
-  # JOB 3 — Audit de sécurité (composer + npm + Trivy)
+  # JOB 3 — Audit de sécurité
   security:
     runs-on: ubuntu-latest
     needs: [test-backend, test-frontend]
@@ -214,7 +213,7 @@ jobs:
         run: npm run build
         working-directory: ./frontend-web
 
-  # JOB 5 — Deploy Backend (push sur main uniquement = merge PR)
+  # JOB 5 — Deploy Backend
   deploy-backend:
     name: Deploy Backend -> Azure App Service
     runs-on: ubuntu-latest
@@ -239,7 +238,7 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Build image Docker (backend production)
+      - name: Build image Docker backend
         working-directory: ./backend
         env:
           IMAGE_TAG: ${{ github.sha }}
@@ -250,7 +249,7 @@ jobs:
             -t "${BACKEND_IMAGE}:latest" \
             .
 
-      - name: Scan image Docker (CRITICAL - bloquant)
+      - name: Scan image Docker backend (CRITICAL - bloquant)
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
@@ -258,14 +257,14 @@ jobs:
           exit-code: '1'
           format: table
 
-      - name: Push image vers ACR
+      - name: Push image backend vers ACR
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker push "${BACKEND_IMAGE}:${IMAGE_TAG}"
           docker push "${BACKEND_IMAGE}:latest"
 
-      - name: Deployer sur Azure App Service
+      - name: Deployer backend sur Azure App Service
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ secrets.BACKEND_APP_NAME }}
@@ -275,9 +274,9 @@ jobs:
         if: always()
         run: az logout
 
-  # JOB 6 — Deploy Frontend (push sur main uniquement = merge PR)
+  # JOB 6 — Deploy Frontend (Docker → App Service)
   deploy-frontend:
-    name: Deploy Frontend -> Azure Static Web Apps
+    name: Deploy Frontend -> Azure App Service
     runs-on: ubuntu-latest
     needs: [build]
     permissions:
@@ -288,14 +287,51 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy to Azure Static Web Apps
-        uses: Azure/static-web-apps-deploy@v1
+      - name: Login Azure
+        uses: azure/login@v2
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          action: upload
-          app_location: frontend-web
-          output_location: dist
-          app_build_command: npm run build
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login Azure Container Registry
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build image Docker frontend
+        working-directory: ./frontend-web
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            -f Dockerfile.prod \
+            --build-arg VITE_API_URL=${{ secrets.VITE_API_URL }} \
+            -t "${FRONTEND_IMAGE}:${IMAGE_TAG}" \
+            -t "${FRONTEND_IMAGE}:latest" \
+            .
+
+      - name: Scan image Docker frontend (CRITICAL - bloquant)
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          image-ref: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          severity: CRITICAL
+          exit-code: '1'
+          format: table
+
+      - name: Push image frontend vers ACR
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker push "${FRONTEND_IMAGE}:${IMAGE_TAG}"
+          docker push "${FRONTEND_IMAGE}:latest"
+
+      - name: Deployer frontend sur Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.FRONTEND_APP_NAME }}
+          images: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+
+      - name: Logout Azure
+        if: always()
+        run: az logout
