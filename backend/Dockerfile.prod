@@ -1,0 +1,56 @@
+# ── Étape 1 : Build (compilation des dépendances)
+FROM php:8.3-fpm-alpine AS builder
+
+RUN apk add --no-cache \
+    git curl libpng-dev libzip-dev oniguruma-dev libxml2-dev \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+# On copie d'abord les manifestes pour profiter du cache Docker
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+
+COPY . .
+
+# Scripts Composer post-install (auto-append, etc.)
+RUN composer run-script --no-dev post-install-cmd || true
+
+# ── Étape 2 : Image de production (légère)
+FROM php:8.3-fpm-alpine AS production
+
+RUN apk add --no-cache \
+    libpng-dev libzip-dev oniguruma-dev libxml2-dev nginx \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+
+# Configuration PHP optimisée pour la production
+RUN echo "upload_max_filesize = 2G"   >> /usr/local/etc/php/conf.d/uploads.ini \
+ && echo "post_max_size = 2G"          >> /usr/local/etc/php/conf.d/uploads.ini \
+ && echo "max_execution_time = 1800"   >> /usr/local/etc/php/conf.d/uploads.ini \
+ && echo "max_input_time = 1800"       >> /usr/local/etc/php/conf.d/uploads.ini \
+ && echo "memory_limit = 512M"         >> /usr/local/etc/php/conf.d/uploads.ini \
+ && echo "display_errors = Off"        >> /usr/local/etc/php/conf.d/uploads.ini \
+ && echo "log_errors = On"             >> /usr/local/etc/php/conf.d/uploads.ini
+
+WORKDIR /var/www/html
+
+# Copier le résultat du builder
+COPY --from=builder /var/www/html /var/www/html
+
+# Configuration Nginx (port 8000 pour App Service)
+COPY docker/nginx.conf /etc/nginx/http.d/default.conf
+
+# Script de démarrage production
+COPY docker/start-prod.sh /usr/local/bin/start-prod.sh
+RUN chmod +x /usr/local/bin/start-prod.sh
+
+# Créer les répertoires et permissions
+RUN mkdir -p var/cache var/log var/tmp storage legal \
+ && chown -R www-data:www-data var storage \
+ && chmod -R 755 var storage
+
+EXPOSE 8000
+
+CMD ["/usr/local/bin/start-prod.sh"]
