@@ -78,7 +78,6 @@ backend/composer.lock
 
 # Frontend Web (React)
 frontend-web/node_modules/
-frontend-web/package-lock.json
 frontend-web/yarn.lock
 
 # Frontend Mobile (Expo)
