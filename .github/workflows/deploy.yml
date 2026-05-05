@@ -1,17 +1,34 @@
+# Pipeline CI/CD — SUPFile → Azure
+# Déclenché sur push/PR vers main uniquement.
+#
+# Jobs :
+#   1. test-backend    → PHPUnit (tests Symfony)
+#   2. test-frontend   → Jest (tests React)
+#   3. security        → composer audit + npm audit + Trivy
+#   4. build           → Build frontend (vérification)
+#   5. deploy-backend  → Build image Docker + push ACR + update App Service
+#   6. deploy-frontend → Azure Static Web Apps
+
 name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
 
-# Permissions minimales par défaut pour TOUS les jobs (principe du moindre privilège).
+# Permissions minimales par défaut (principe du moindre privilège).
 permissions:
   contents: read
 
+env:
+  # À remplacer par le nom réel de l'ACR
+  ACR_LOGIN_SERVER: supfileregistry.azurecr.io
+  BACKEND_IMAGE: supfileregistry.azurecr.io/supfile-backend
+
 jobs:
-  # Job 1a — Tests backend (Symfony)
+
+  # JOB 1 — Tests backend (PHPUnit)
   test-backend:
     runs-on: ubuntu-latest
     permissions:
@@ -19,7 +36,7 @@ jobs:
 
     services:
       mysql:
-        image: mysql:8.0.45  # Version fixe, pas de tag flottant :8.0
+        image: mysql:8.0.45
         env:
           MYSQL_ROOT_PASSWORD: ${{ secrets.CI_MYSQL_ROOT_PASSWORD }}
           MYSQL_DATABASE: supfile_test
@@ -43,8 +60,6 @@ jobs:
           ini-values: upload_max_filesize=128M, post_max_size=128M
 
       - name: Create .env for CI
-        # backend/.env est gitignored → absent du runner après checkout.
-        # On crée un .env complet avec TOUTES les variables référencées dans config/.
         run: |
           cat > .env << EOF
           APP_ENV=test
@@ -53,6 +68,9 @@ jobs:
           JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem
           JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem
           JWT_PASSPHRASE=${CI_JWT_PASSPHRASE}
+          STORAGE_DRIVER=local
+          AZURE_STORAGE_CONNECTION_STRING=
+          AZURE_STORAGE_CONTAINER=files
           CORS_ALLOW_ORIGIN='^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$'
           DEFAULT_URI=http://localhost:8000
           MAILER_DSN=null://null
@@ -71,8 +89,6 @@ jobs:
           CI_JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
 
       - name: Install backend dependencies
-        # --no-scripts : empêche cache:clear de tourner avant la génération
-        # des clés JWT (le kernel les exige au boot en env test).
         run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
         working-directory: ./backend
 
@@ -84,7 +100,6 @@ jobs:
           JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
 
       - name: Warm up cache (Test)
-        # Remplace l'auto-script cache:clear sauté par --no-scripts.
         run: php bin/console cache:warmup --env=test
         working-directory: ./backend
         env:
@@ -107,7 +122,7 @@ jobs:
           DATABASE_URL: "mysql://root:${{ secrets.CI_MYSQL_ROOT_PASSWORD }}@127.0.0.1:3306/supfile_test?serverVersion=8.0"
           JWT_PASSPHRASE: ${{ secrets.JWT_PASSPHRASE }}
 
-  # Job 1b — Tests frontend (React/Vite)
+  # JOB 2 — Tests frontend (Jest)
   test-frontend:
     runs-on: ubuntu-latest
     permissions:
@@ -128,7 +143,7 @@ jobs:
         run: npx jest --ci
         working-directory: ./frontend-web
 
-  # Job 2 — Audit de sécurité
+  # JOB 3 — Audit de sécurité (composer + npm + Trivy)
   security:
     runs-on: ubuntu-latest
     needs: [test-backend, test-frontend]
@@ -159,7 +174,25 @@ jobs:
         run: npm audit --audit-level=high
         working-directory: ./frontend-web
 
-  # Job 3 — Build du frontend
+      - name: Scan Trivy dependances PHP (CRITICAL + HIGH)
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: fs
+          scan-ref: backend/
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+          format: table
+
+      - name: Scan Trivy dependances JS (CRITICAL + HIGH)
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: fs
+          scan-ref: frontend-web/
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+          format: table
+
+  # JOB 4 — Build frontend (vérification)
   build:
     runs-on: ubuntu-latest
     needs: [security]
@@ -181,16 +214,88 @@ jobs:
         run: npm run build
         working-directory: ./frontend-web
 
-  # Job 4 — Déploiement
-  # Exécuté uniquement lors d'un push direct sur main
-  deploy:
+  # JOB 5 — Deploy Backend (push sur main uniquement = merge PR)
+  deploy-backend:
+    name: Deploy Backend -> Azure App Service
     runs-on: ubuntu-latest
     needs: [build]
     permissions:
       contents: read
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Deploy
-        run: echo "Deploy OK — Application Supfile déployée avec succès"
 
-        
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login Azure Container Registry
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build image Docker (backend production)
+        working-directory: ./backend
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            -f Dockerfile.prod \
+            -t "${BACKEND_IMAGE}:${IMAGE_TAG}" \
+            -t "${BACKEND_IMAGE}:latest" \
+            .
+
+      - name: Scan image Docker (CRITICAL - bloquant)
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          image-ref: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          severity: CRITICAL
+          exit-code: '1'
+          format: table
+
+      - name: Push image vers ACR
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker push "${BACKEND_IMAGE}:${IMAGE_TAG}"
+          docker push "${BACKEND_IMAGE}:latest"
+
+      - name: Deployer sur Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.BACKEND_APP_NAME }}
+          images: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+
+      - name: Logout Azure
+        if: always()
+        run: az logout
+
+  # JOB 6 — Deploy Frontend (push sur main uniquement = merge PR)
+  deploy-frontend:
+    name: Deploy Frontend -> Azure Static Web Apps
+    runs-on: ubuntu-latest
+    needs: [build]
+    permissions:
+      contents: read
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: frontend-web
+          output_location: dist
+          app_build_command: npm run build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
