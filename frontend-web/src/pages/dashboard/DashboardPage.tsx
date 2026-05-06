@@ -8,6 +8,7 @@ import { FileText, Image, Video, Folder } from 'lucide-react';
 import { useAuthStore }                          from '@/stores/authStore';
 import { useUiStore }                            from '@/stores/uiStore';
 import { useDashboardStats, useRecentFiles }     from '@/hooks/useDashboard';
+import { useIsMobile }                           from '@/hooks/useIsMobile';
 import type { StatsByType }                      from '@/services/dashboardService';
 import { fmtSize, fmtDate, getMimeInfo }         from '@/lib/utils';
 import { MaterialIcon }                          from '@/components/ui/MaterialIcon';
@@ -104,6 +105,7 @@ const DonutChart = ({ categories, total }: DonutChartProps): ReactElement => {
 
 const DashboardPage = (): ReactElement => {
     const navigate     = useNavigate();
+    const isMobile     = useIsMobile();
     const user         = useAuthStore((s) => s.user);
     const { openUpload, openNewFolder } = useUiStore();
 
@@ -192,7 +194,7 @@ const DashboardPage = (): ReactElement => {
             <div
                 style={{
                     display:             'grid',
-                    gridTemplateColumns: '1fr 2fr',
+                    gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr',
                     gap:                 '18px',
                 }}
             >
@@ -487,7 +489,7 @@ const DashboardPage = (): ReactElement => {
                 <div
                     style={{
                         display:             'grid',
-                        gridTemplateColumns: 'repeat(4,1fr)',
+                        gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)',
                         gap:                 '10px',
                     }}
                 >

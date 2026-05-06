@@ -9,6 +9,7 @@ import { Outlet, useParams }                        from 'react-router-dom';
 import { useAuthStore }    from '@/stores/authStore';
 import { useUiStore }      from '@/stores/uiStore';
 import { useUpdateProfile } from '@/hooks/useUser';
+import { useIsMobile }     from '@/hooks/useIsMobile';
 import { Header }          from './Header';
 import { Sidebar }         from './Sidebar';
 import { UploadModal }     from '@/components/ui/UploadModal';
@@ -17,6 +18,9 @@ import { NewFolderModal }  from '@/components/ui/NewFolderModal';
 export const AppLayout = (): ReactElement => {
     const user    = useAuthStore((s) => s.user);
     const setUser = useAuthStore((s) => s.setUser);
+
+    const isMobile = useIsMobile();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const updateProfile = useUpdateProfile();
 
@@ -103,11 +107,33 @@ export const AppLayout = (): ReactElement => {
             }}
         >
             {/* ── Header sticky ── */}
-            <Header isDark={isDark} onToggleDark={handleToggleDark} />
+            <Header
+                isDark={isDark}
+                onToggleDark={handleToggleDark}
+                isMobile={isMobile}
+                onMenuToggle={() => setSidebarOpen((s) => !s)}
+            />
 
             {/* ── Corps : Sidebar + Contenu principal ── */}
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                <Sidebar />
+                <Sidebar
+                    isOpen={sidebarOpen}
+                    isMobile={isMobile}
+                    onClose={() => setSidebarOpen(false)}
+                />
+
+                {/* Backdrop overlay — mobile only, closes sidebar on click */}
+                {isMobile && sidebarOpen && (
+                    <div
+                        onClick={() => setSidebarOpen(false)}
+                        style={{
+                            position:   'fixed',
+                            inset:      0,
+                            background: 'rgba(0,0,0,0.4)',
+                            zIndex:     190,
+                        }}
+                    />
+                )}
 
                 {/* Zone de contenu principal avec drag & drop global */}
                 <main
@@ -119,7 +145,7 @@ export const AppLayout = (): ReactElement => {
                     style={{
                         flex:       1,
                         overflowY:  'auto',
-                        padding:    '30px 34px',
+                        padding:    isMobile ? '20px 16px' : '30px 34px',
                         background: 'var(--bg)',
                         position:   'relative',
                     }}
