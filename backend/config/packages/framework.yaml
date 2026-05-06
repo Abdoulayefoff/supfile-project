@@ -8,6 +8,17 @@ framework:
     #esi: true
     #fragments: true
 
+when@prod:
+    framework:
+        # Azure App Service + Cloudflare sit in front of the app as reverse proxies.
+        # Without this, Symfony generates http:// redirect_uris → OAuth mismatch.
+        trusted_proxies: '127.0.0.1,REMOTE_ADDR'
+        trusted_headers:
+            - x-forwarded-for
+            - x-forwarded-proto
+            - x-forwarded-port
+            - x-forwarded-host
+
 when@test:
     framework:
         test: true
