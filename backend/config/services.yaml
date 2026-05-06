@@ -45,3 +45,8 @@ services:
     # ── L'interface est résolue via la factory
     App\Service\Storage\FileStorageInterface:
         factory: ['@App\Service\Storage\StorageFactory', 'create']
+
+    # ── OAuthController : URL de redirection frontend selon l'environnement
+    App\Controller\Api\OAuthController:
+        arguments:
+            $frontendUrl: '%env(default::FRONTEND_URL)%'

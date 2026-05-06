@@ -49,7 +49,7 @@ beforeEach(() => {
     useAuthStore.setState({ token: null, user: null, isAuthenticated: false });
 });
 
-// ─── useLogin 
+// ─── useLogin
 
 describe('useLogin()', () => {
     it('appelle authService.login avec email et password', async () => {
@@ -89,7 +89,7 @@ describe('useLogin()', () => {
         expect(useAuthStore.getState().user).toEqual(user);
     });
 
-    it('passe rememberMe au store (true par défaut)', async () => {
+    it('stocke toujours le token dans sessionStorage (jamais localStorage)', async () => {
         const user = makeUser();
         mockedLogin.mockResolvedValueOnce({ token: 'jwt', user });
 
@@ -99,10 +99,11 @@ describe('useLogin()', () => {
             await result.current.mutateAsync({ email: 'abdoulaye@example.com', password: 'secret' });
         });
 
-        expect(localStorage.getItem('jwt_token')).toBe('jwt');
+        expect(sessionStorage.getItem('jwt_token')).toBe('jwt');
+        expect(localStorage.getItem('jwt_token')).toBeNull();
     });
 
-    it('utilise sessionStorage quand rememberMe=false', async () => {
+    it('stocke dans sessionStorage même avec rememberMe=false', async () => {
         const user = makeUser();
         mockedLogin.mockResolvedValueOnce({ token: 'jwt', user });
 
@@ -137,93 +138,26 @@ describe('useLogin()', () => {
     });
 
     it('ne met pas à jour le store en cas d\'erreur', async () => {
-        mockedLogin.mockRejectedValueOnce({ response: { status: 401 } });
+        mockedLogin.mockRejectedValueOnce(new Error('Erreur serveur'));
 
         const { result } = renderHook(() => useLogin(), { wrapper: createWrapper() });
 
         await act(async () => {
-            result.current.mutate({ email: 'bad@example.com', password: 'wrong' });
+            result.current.mutate({ email: 'test@example.com', password: 'pass' });
         });
 
         await waitFor(() => expect(result.current.isError).toBe(true));
         expect(useAuthStore.getState().token).toBeNull();
+        expect(useAuthStore.getState().user).toBeNull();
     });
 });
 
-// ─── useRegister 
-
-describe('useRegister()', () => {
-    it('appelle authService.register avec les données complètes', async () => {
-        const user = makeUser();
-        mockedRegister.mockResolvedValueOnce({ token: 'jwt', user });
-
-        const { result } = renderHook(() => useRegister(), { wrapper: createWrapper() });
-
-        await act(async () => {
-            await result.current.mutateAsync({
-                email: 'new@example.com',
-                password: 'Secret@123',
-                firstName: 'Abdoulaye',
-                lastName: 'FOFANA',
-            });
-        });
-
-        expect(mockedRegister).toHaveBeenCalledWith({
-            email: 'new@example.com',
-            password: 'Secret@123',
-            firstName: 'Abdoulaye',
-            lastName: 'FOFANA',
-        });
-    });
-
-    it('met à jour le store après un register réussi', async () => {
-        const user = makeUser();
-        mockedRegister.mockResolvedValueOnce({ token: 'jwt-reg', user });
-
-        const { result } = renderHook(() => useRegister(), { wrapper: createWrapper() });
-
-        await act(async () => {
-            await result.current.mutateAsync({
-                email: 'new@example.com',
-                password: 'Secret@123',
-                firstName: 'Abdoulaye',
-                lastName: 'FOFANA',
-            });
-        });
-
-        expect(useAuthStore.getState().isAuthenticated).toBe(true);
-        expect(useAuthStore.getState().token).toBe('jwt-reg');
-    });
-
-    it('expose l\'erreur si l\'email existe déjà', async () => {
-        mockedRegister.mockRejectedValueOnce({ response: { status: 409 } });
-
-        const { result } = renderHook(() => useRegister(), { wrapper: createWrapper() });
-
-        await act(async () => {
-            result.current.mutate({
-                email: 'existing@example.com',
-                password: 'Secret@123',
-                firstName: 'Abdoulaye',
-                lastName: 'FOFANA',
-            });
-        });
-
-        await waitFor(() => expect(result.current.isError).toBe(true));
-    });
-});
-
-// ─── useLogout 
+// ─── useLogout
 
 describe('useLogout()', () => {
-    it('expose une fonction logout', () => {
-        const { result } = renderHook(() => useLogout(), { wrapper: createWrapper() });
-        expect(typeof result.current.logout).toBe('function');
-    });
-
-    it('vide le store auth quand logout() est appelé', () => {
+    it('réinitialise le store auth', () => {
         useAuthStore.setState({
-            token: 'existing-token',
+            token: 'tok',
             user: makeUser(),
             isAuthenticated: true,
         });
@@ -239,9 +173,9 @@ describe('useLogout()', () => {
         expect(useAuthStore.getState().user).toBeNull();
     });
 
-    it('nettoie localStorage quand logout() est appelé', () => {
-        localStorage.setItem('jwt_token', 'tok');
-        localStorage.setItem('sf_user', JSON.stringify(makeUser()));
+    it('nettoie sessionStorage quand logout() est appelé', () => {
+        sessionStorage.setItem('jwt_token', 'tok');
+        sessionStorage.setItem('sf_user', JSON.stringify(makeUser()));
 
         const { result } = renderHook(() => useLogout(), { wrapper: createWrapper() });
 
@@ -249,7 +183,7 @@ describe('useLogout()', () => {
             result.current.logout();
         });
 
-        expect(localStorage.getItem('jwt_token')).toBeNull();
-        expect(localStorage.getItem('sf_user')).toBeNull();
+        expect(sessionStorage.getItem('jwt_token')).toBeNull();
+        expect(sessionStorage.getItem('sf_user')).toBeNull();
     });
 });

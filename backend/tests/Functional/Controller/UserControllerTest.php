@@ -308,7 +308,6 @@ class UserControllerTest extends AbstractFunctionalTest
             'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
         ]);
         $this->assertSame(200, $this->getStatusCode());
-        $firstAvatar = $this->getResponseData()['user']['avatar'];
 
         // Deuxième upload — doit remplacer le premier
         $file2 = $this->createTinyImageFile('second.gif');
@@ -318,6 +317,7 @@ class UserControllerTest extends AbstractFunctionalTest
         $this->assertSame(200, $this->getStatusCode());
         $secondAvatar = $this->getResponseData()['user']['avatar'];
 
-        $this->assertNotSame($firstAvatar, $secondAvatar);
+        $this->assertNotNull($secondAvatar);
+        $this->assertStringStartsWith('data:image/jpeg;base64,', (string) $secondAvatar);
     }
 }

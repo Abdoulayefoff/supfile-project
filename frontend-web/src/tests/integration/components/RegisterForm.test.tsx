@@ -48,18 +48,19 @@ beforeEach(() => {
 describe('RegisterForm — rendu', () => {
     it('affiche le champ Prénom', () => {
         renderRegisterForm();
-        expect(screen.getByPlaceholderText('Abdoulaye')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText('Votre prénom')).toBeInTheDocument();
     });
 
     it('affiche le champ Nom', () => {
         renderRegisterForm();
-        expect(screen.getByPlaceholderText('Fofana')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText('Votre nom')).toBeInTheDocument();
     });
 
     it('affiche le champ Email', () => {
         renderRegisterForm();
-        expect(screen.getByPlaceholderText('vous@exemple.com')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText('votre@email.com')).toBeInTheDocument();
     });
+
 
     it('affiche le champ Mot de passe', () => {
         renderRegisterForm();
@@ -103,9 +104,9 @@ describe('RegisterForm — validation', () => {
     it('affiche une erreur si l\'email est invalide', async () => {
         const { container } = renderRegisterForm();
 
-        await userEvent.type(screen.getByPlaceholderText('Abdoulaye'), 'Abdoulaye');
-        await userEvent.type(screen.getByPlaceholderText('Fofana'), 'FOFANA');
-        await userEvent.type(screen.getByPlaceholderText('vous@exemple.com'), 'pas-un-email');
+        await userEvent.type(screen.getByPlaceholderText('Votre prénom'), 'Abdoulaye');
+        await userEvent.type(screen.getByPlaceholderText('Votre nom'), 'FOFANA');
+        await userEvent.type(screen.getByPlaceholderText('votre@email.com'), 'pas-un-email');
         await userEvent.type(screen.getByPlaceholderText('Min. 8 caractères'), 'motdepasse');
         await userEvent.type(screen.getByPlaceholderText('••••••••'), 'motdepasse');
 
@@ -119,9 +120,9 @@ describe('RegisterForm — validation', () => {
     it('affiche une erreur si le mot de passe est trop court', async () => {
         renderRegisterForm();
 
-        await userEvent.type(screen.getByPlaceholderText('Abdoulaye'), 'Abdoulaye');
-        await userEvent.type(screen.getByPlaceholderText('Fofana'), 'FOFANA');
-        await userEvent.type(screen.getByPlaceholderText('vous@exemple.com'), 'abdoulaye@example.com');
+        await userEvent.type(screen.getByPlaceholderText('Votre prénom'), 'Abdoulaye');
+        await userEvent.type(screen.getByPlaceholderText('Votre nom'), 'FOFANA');
+        await userEvent.type(screen.getByPlaceholderText('votre@email.com'), 'abdoulaye@example.com');
         await userEvent.type(screen.getByPlaceholderText('Min. 8 caractères'), 'court');
         await userEvent.type(screen.getByPlaceholderText('••••••••'), 'court');
 
@@ -135,9 +136,9 @@ describe('RegisterForm — validation', () => {
     it('affiche une erreur si les mots de passe ne correspondent pas', async () => {
         renderRegisterForm();
 
-        await userEvent.type(screen.getByPlaceholderText('Abdoulaye'), 'Abdoulaye');
-        await userEvent.type(screen.getByPlaceholderText('Fofana'), 'FOFANA');
-        await userEvent.type(screen.getByPlaceholderText('vous@exemple.com'), 'abdoulaye@example.com');
+        await userEvent.type(screen.getByPlaceholderText('Votre prénom'), 'Abdoulaye');
+        await userEvent.type(screen.getByPlaceholderText('Votre nom'), 'FOFANA');
+        await userEvent.type(screen.getByPlaceholderText('votre@email.com'), 'abdoulaye@example.com');
         await userEvent.type(screen.getByPlaceholderText('Min. 8 caractères'), 'motdepasse1');
         await userEvent.type(screen.getByPlaceholderText('••••••••'), 'motdepasse2');
 
@@ -169,11 +170,12 @@ describe('RegisterForm — soumission réussie', () => {
 
         renderRegisterForm();
 
-        await userEvent.type(screen.getByPlaceholderText('Abdoulaye'), 'Abdoulaye');
-        await userEvent.type(screen.getByPlaceholderText('Fofana'), 'FOFANA');
-        await userEvent.type(screen.getByPlaceholderText('vous@exemple.com'), 'abdoulaye@example.com');
+        await userEvent.type(screen.getByPlaceholderText('Votre prénom'), 'Abdoulaye');
+        await userEvent.type(screen.getByPlaceholderText('Votre nom'), 'FOFANA');
+        await userEvent.type(screen.getByPlaceholderText('votre@email.com'), 'abdoulaye@example.com');
         await userEvent.type(screen.getByPlaceholderText('Min. 8 caractères'), 'motdepasse');
         await userEvent.type(screen.getByPlaceholderText('••••••••'), 'motdepasse');
+        await userEvent.click(screen.getByRole('checkbox'));
 
         fireEvent.click(screen.getByRole('button', { name: /créer mon compte/i }));
 
@@ -183,6 +185,7 @@ describe('RegisterForm — soumission réussie', () => {
                 password:  'motdepasse',
                 firstName: 'Abdoulaye',
                 lastName:  'FOFANA',
+                consent:   true,
             });
         });
     });
@@ -192,11 +195,12 @@ describe('RegisterForm — soumission réussie', () => {
 
         renderRegisterForm();
 
-        await userEvent.type(screen.getByPlaceholderText('Abdoulaye'), 'Abdoulaye');
-        await userEvent.type(screen.getByPlaceholderText('Fofana'), 'FOFANA');
-        await userEvent.type(screen.getByPlaceholderText('vous@exemple.com'), 'abdoulaye@example.com');
+        await userEvent.type(screen.getByPlaceholderText('Votre prénom'), 'Abdoulaye');
+        await userEvent.type(screen.getByPlaceholderText('Votre nom'), 'FOFANA');
+        await userEvent.type(screen.getByPlaceholderText('votre@email.com'), 'abdoulaye@example.com');
         await userEvent.type(screen.getByPlaceholderText('Min. 8 caractères'), 'motdepasse');
         await userEvent.type(screen.getByPlaceholderText('••••••••'), 'motdepasse');
+        await userEvent.click(screen.getByRole('checkbox'));
 
         fireEvent.click(screen.getByRole('button', { name: /créer mon compte/i }));
 
@@ -216,11 +220,12 @@ describe('RegisterForm — erreur API', () => {
 
         renderRegisterForm();
 
-        await userEvent.type(screen.getByPlaceholderText('Abdoulaye'), 'Abdoulaye');
-        await userEvent.type(screen.getByPlaceholderText('Fofana'), 'FOFANA');
-        await userEvent.type(screen.getByPlaceholderText('vous@exemple.com'), 'abdoulaye@example.com');
+        await userEvent.type(screen.getByPlaceholderText('Votre prénom'), 'Abdoulaye');
+        await userEvent.type(screen.getByPlaceholderText('Votre nom'), 'FOFANA');
+        await userEvent.type(screen.getByPlaceholderText('votre@email.com'), 'abdoulaye@example.com');
         await userEvent.type(screen.getByPlaceholderText('Min. 8 caractères'), 'motdepasse');
         await userEvent.type(screen.getByPlaceholderText('••••••••'), 'motdepasse');
+        await userEvent.click(screen.getByRole('checkbox'));
 
         fireEvent.click(screen.getByRole('button', { name: /créer mon compte/i }));
 
@@ -234,11 +239,12 @@ describe('RegisterForm — erreur API', () => {
 
         renderRegisterForm();
 
-        await userEvent.type(screen.getByPlaceholderText('Abdoulaye'), 'Abdoulaye');
-        await userEvent.type(screen.getByPlaceholderText('Fofana'), 'FOFANA');
-        await userEvent.type(screen.getByPlaceholderText('vous@exemple.com'), 'abdoulaye@example.com');
+        await userEvent.type(screen.getByPlaceholderText('Votre prénom'), 'Abdoulaye');
+        await userEvent.type(screen.getByPlaceholderText('Votre nom'), 'FOFANA');
+        await userEvent.type(screen.getByPlaceholderText('votre@email.com'), 'abdoulaye@example.com');
         await userEvent.type(screen.getByPlaceholderText('Min. 8 caractères'), 'motdepasse');
         await userEvent.type(screen.getByPlaceholderText('••••••••'), 'motdepasse');
+        await userEvent.click(screen.getByRole('checkbox'));
 
         fireEvent.click(screen.getByRole('button', { name: /créer mon compte/i }));
 
@@ -254,11 +260,12 @@ describe('RegisterForm — erreur API', () => {
 
         renderRegisterForm();
 
-        await userEvent.type(screen.getByPlaceholderText('Abdoulaye'), 'Abdoulaye');
-        await userEvent.type(screen.getByPlaceholderText('Fofana'), 'FOFANA');
-        await userEvent.type(screen.getByPlaceholderText('vous@exemple.com'), 'abdoulaye@example.com');
+        await userEvent.type(screen.getByPlaceholderText('Votre prénom'), 'Abdoulaye');
+        await userEvent.type(screen.getByPlaceholderText('Votre nom'), 'FOFANA');
+        await userEvent.type(screen.getByPlaceholderText('votre@email.com'), 'abdoulaye@example.com');
         await userEvent.type(screen.getByPlaceholderText('Min. 8 caractères'), 'motdepasse');
         await userEvent.type(screen.getByPlaceholderText('••••••••'), 'motdepasse');
+        await userEvent.click(screen.getByRole('checkbox'));
 
         fireEvent.click(screen.getByRole('button', { name: /créer mon compte/i }));
 

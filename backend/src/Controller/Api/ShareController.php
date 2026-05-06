@@ -11,12 +11,12 @@ use App\Repository\ShareRepository;
 use App\Repository\UserRepository;
 use App\Service\Folder\ZipGenerator;
 use App\Service\Share\ShareManager;
+use App\Service\Storage\FileStorageInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -30,6 +30,7 @@ class ShareController extends AbstractController
         private FolderRepository $folderRepository,
         private UserRepository $userRepository,
         private ZipGenerator $zipGenerator,
+        private FileStorageInterface $fileStorage,
     ) {}
 
     /**
@@ -169,7 +170,7 @@ class ShareController extends AbstractController
      * Le mot de passe (si requis) doit être transmis dans le body JSON : { "password": "xxx" }
      */
     #[Route('/public/{token}/download', name: 'public_download', methods: ['POST'])]
-    public function publicDownload(string $token, Request $request): BinaryFileResponse|JsonResponse
+    public function publicDownload(string $token, Request $request): StreamedResponse|JsonResponse
     {
         $share = $this->shareManager->findByToken($token);
 
@@ -192,15 +193,26 @@ class ShareController extends AbstractController
         $resource = $share->getSharedResource();
 
         if ($resource instanceof File) {
-            $path = $resource->getPath();
-            if (!file_exists($path)) {
+            if (!$this->fileStorage->exists($resource)) {
                 return $this->json(['error' => 'Fichier introuvable sur le serveur'], Response::HTTP_NOT_FOUND);
             }
-            $response = new BinaryFileResponse($path);
-            $response->setContentDisposition(
-                ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-                $resource->getName()
-            );
+            $stream = $this->fileStorage->getStream($resource);
+            $name   = $resource->getName();
+
+            $response = new StreamedResponse(static function () use ($stream): void {
+                if (is_resource($stream)) {
+                    fpassthru($stream);
+                    fclose($stream);
+                } elseif ($stream instanceof \Psr\Http\Message\StreamInterface) {
+                    while (!$stream->eof()) {
+                        echo $stream->read(8192);
+                    }
+                }
+            });
+            $response->headers->set('Content-Type', $resource->getMimeType() ?? 'application/octet-stream');
+            $response->headers->set('Content-Disposition', 'attachment; filename="' . addslashes($name) . '"');
+            $response->headers->set('Content-Length', (string) $resource->getSize());
+
             return $response;
         }
 
@@ -210,13 +222,19 @@ class ShareController extends AbstractController
             } catch (\RuntimeException $e) {
                 return $this->json(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
-            $response = new BinaryFileResponse($zipPath);
-            $response->setContentDisposition(
-                ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-                $resource->getName() . '.zip'
-            );
+
+            $folderName = $resource->getName();
+            $response   = new StreamedResponse(static function () use ($zipPath): void {
+                $fp = fopen($zipPath, 'rb');
+                if ($fp !== false) {
+                    fpassthru($fp);
+                    fclose($fp);
+                }
+                @unlink($zipPath);
+            });
             $response->headers->set('Content-Type', 'application/zip');
-            $response->deleteFileAfterSend(true);
+            $response->headers->set('Content-Disposition', 'attachment; filename="' . addslashes($folderName) . '.zip"');
+
             return $response;
         }
 
@@ -229,7 +247,7 @@ class ShareController extends AbstractController
      * Pour un partage protégé par mot de passe : ?password=xxx
      */
     #[Route('/public/{token}/preview', name: 'public_preview', methods: ['GET'])]
-    public function publicPreview(string $token, Request $request): BinaryFileResponse|JsonResponse
+    public function publicPreview(string $token, Request $request): StreamedResponse|JsonResponse
     {
         $share = $this->shareManager->findByToken($token);
 
@@ -254,19 +272,27 @@ class ShareController extends AbstractController
             return $this->json(['error' => 'La prévisualisation n\'est disponible que pour les fichiers'], Response::HTTP_BAD_REQUEST);
         }
 
-        $path = $resource->getPath();
-        if (!file_exists($path)) {
+        if (!$this->fileStorage->exists($resource)) {
             return $this->json(['error' => 'Fichier introuvable sur le serveur'], Response::HTTP_NOT_FOUND);
         }
 
-        $response = new BinaryFileResponse($path);
+        $stream = $this->fileStorage->getStream($resource);
+        $name   = $resource->getName();
+
+        $response = new StreamedResponse(static function () use ($stream): void {
+            if (is_resource($stream)) {
+                fpassthru($stream);
+                fclose($stream);
+            } elseif ($stream instanceof \Psr\Http\Message\StreamInterface) {
+                while (!$stream->eof()) {
+                    echo $stream->read(8192);
+                }
+            }
+        });
         $response->headers->set('Content-Type', $resource->getMimeType());
+        $response->headers->set('Content-Disposition', 'inline; filename="' . addslashes($name) . '"');
+        $response->headers->set('Content-Length', (string) $resource->getSize());
         $response->headers->set('Accept-Ranges', 'bytes');
-        $response->setContentDisposition(
-            ResponseHeaderBag::DISPOSITION_INLINE,
-            $resource->getName()
-        );
-        $response->prepare($request);
 
         return $response;
     }

@@ -2,7 +2,8 @@
 FROM php:8.3-fpm-alpine AS builder
 
 RUN apk add --no-cache \
-    git curl libpng-dev libzip-dev oniguruma-dev libxml2-dev \
+    git curl libpng-dev libjpeg-turbo-dev libzip-dev oniguruma-dev libxml2-dev \
+    && docker-php-ext-configure gd --with-jpeg \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -22,7 +23,8 @@ RUN composer run-script --no-dev post-install-cmd || true
 FROM php:8.3-fpm-alpine AS production
 
 RUN apk add --no-cache \
-    libpng-dev libzip-dev oniguruma-dev libxml2-dev nginx \
+    libpng-dev libjpeg-turbo-dev libzip-dev oniguruma-dev libxml2-dev nginx \
+    && docker-php-ext-configure gd --with-jpeg \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
 # Configuration PHP optimisée pour la production

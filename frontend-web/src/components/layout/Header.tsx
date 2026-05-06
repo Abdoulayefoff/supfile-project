@@ -200,7 +200,7 @@ export const Header = ({ isDark, onToggleDark, onMenuToggle, isMobile = false }:
                     >
                         {user?.avatar ? (
                             <img
-                                src={`${(import.meta.env.VITE_API_URL as string).replace(/\/api$/, '')}${user.avatar}`}
+                                src={user.avatar}
                                 alt="avatar"
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />

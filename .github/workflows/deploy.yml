@@ -72,6 +72,7 @@ jobs:
           AZURE_STORAGE_CONTAINER=files
           CORS_ALLOW_ORIGIN='^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$'
           DEFAULT_URI=http://localhost:8000
+          FRONTEND_URL=http://localhost:3000
           MAILER_DSN=null://null
           MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0
           OAUTH_GOOGLE_CLIENT_ID=ci-placeholder

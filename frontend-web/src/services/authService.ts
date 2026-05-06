@@ -12,6 +12,7 @@ interface RegisterRequest {
     password: string;
     firstName: string;
     lastName: string;
+    consent: boolean;
 }
 
 interface AuthResponse {
