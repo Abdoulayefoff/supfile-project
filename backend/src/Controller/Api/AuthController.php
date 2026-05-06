@@ -38,6 +38,10 @@ class AuthController extends AbstractController
             return new JsonResponse(['error' => 'Le mot de passe doit contenir au moins 8 caractères'], 400);
         }
 
+        if (empty($data['consent'])) {
+            return new JsonResponse(['error' => 'Vous devez accepter les conditions d\'utilisation'], 422);
+        }
+
         $existingUser = $this->em->getRepository(User::class)->findOneBy(['email' => $data['email']]);
         if ($existingUser) {
             return new JsonResponse(['error' => 'Email already exists'], 409);
@@ -49,6 +53,7 @@ class AuthController extends AbstractController
             $data['firstName'] ?? null,
             $data['lastName'] ?? null
         );
+        $user->setConsentAcceptedAt(new \DateTimeImmutable());
 
         $token = $this->jwtManager->create($user);
 

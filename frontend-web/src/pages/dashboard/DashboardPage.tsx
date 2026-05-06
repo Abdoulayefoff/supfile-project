@@ -123,9 +123,8 @@ const DashboardPage = (): ReactElement => {
 
     const categories: StorageCategory[] = buildStorageCategories(stats?.statsByType);
 
-    // URL de l'avatar (backend stocke un chemin relatif comme "/storage/avatars/file.jpg")
-    const avatarBaseUrl = (import.meta.env.VITE_API_URL as string).replace(/\/api$/, '');
-    const avatarUrl     = user?.avatar ? `${avatarBaseUrl}${user.avatar}` : null;
+    // L'avatar est stocké en base64 directement en DB — utilisable directement comme src
+    const avatarUrl = user?.avatar ?? null;
     const avatarLetter  = user?.firstName?.charAt(0).toUpperCase()
         ?? user?.email?.charAt(0).toUpperCase()
         ?? '?';

@@ -6,6 +6,7 @@ import {
     updateProfile,
     changePassword,
     uploadAvatar,
+    deleteAccount,
 } from '@/services/userService';
 
 import type {
@@ -45,11 +46,9 @@ export const useUpdateProfile = () => {
     return useMutation({
         mutationFn: (params: UpdateProfileParams) => updateProfile(params),
         onSuccess: ({ user, token }) => {
-            // Si un nouveau token JWT est fourni (changement d'email), on met tout à jour
-            // On préserve le mode rememberMe courant (localStorage = remembered)
+            // Si un nouveau token JWT est fourni (changement d'email), on recharge la session
             if (token) {
-                const rememberMe = !!localStorage.getItem('jwt_token');
-                setAuth(token, user, rememberMe);
+                setAuth(token, user);
             } else {
                 setUser(user);
             }
@@ -72,8 +71,7 @@ export const useChangeEmail = () => {
         mutationFn: (email: string) => updateProfile({ email }),
         onSuccess: ({ user, token }) => {
             if (token) {
-                const rememberMe = !!localStorage.getItem('jwt_token');
-                setAuth(token, user, rememberMe);
+                setAuth(token, user);
             } else {
                 setUser(user);
             }
@@ -114,6 +112,21 @@ export const useUploadAvatar = () => {
             setUser(updatedUser);
             // Invalide le cache pour forcer un refetch propre
             void qc.invalidateQueries({ queryKey: userKeys.me });
+        },
+    });
+};
+
+/**
+ * Supprime définitivement le compte (RGPD).
+ * DELETE /api/user/me — déconnecte automatiquement après succès.
+ */
+export const useDeleteAccount = () => {
+    const logout = useAuthStore((s) => s.logout);
+
+    return useMutation({
+        mutationFn: deleteAccount,
+        onSuccess: () => {
+            logout();
         },
     });
 };

@@ -1,7 +1,7 @@
 // Hooks pour l'authentification (login, register, logout)
 
 import { useMutation } from '@tanstack/react-query';
-import { authService }  from '@/services/authService';
+import { authService } from '@/services/authService';
 import { useAuthStore } from '@/stores/authStore';
 
 /** Connecte l'utilisateur et stocke le token + user dans le store. */
@@ -21,10 +21,11 @@ export const useRegister = () => {
     const setAuth = useAuthStore((s) => s.setAuth);
     return useMutation({
         mutationFn: (data: {
-            email:     string;
-            password:  string;
+            email: string;
+            password: string;
             firstName: string;
-            lastName:  string;
+            lastName: string;
+            consent: boolean;
         }) => authService.register(data),
         onSuccess: ({ token, user }) => {
             setAuth(token, user);

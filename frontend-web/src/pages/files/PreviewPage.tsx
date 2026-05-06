@@ -15,6 +15,7 @@ import { MaterialIcon }              from '@/components/ui/MaterialIcon';
 import { getMimeInfo, fmtSize, fmtDate } from '@/lib/utils';
 import { useDownloadFile }           from '@/hooks/useFiles';
 import apiClient                     from '@/lib/axios';
+import { useIsMobile }               from '@/hooks/useIsMobile';
 
 // Types
 
@@ -104,6 +105,7 @@ const PreviewPage = (): ReactElement => {
     const { fileId }               = useParams<{ fileId: string }>();
     const navigate                 = useNavigate();
     const { mutate: downloadFile } = useDownloadFile();
+    const isMobile                 = useIsMobile();
 
     const [showInfo, setShowInfo] = useState(true);
 
@@ -337,7 +339,7 @@ const PreviewPage = (): ReactElement => {
             </div>
 
             {/* ── Zone viewer + panneau info ── */}
-            <div style={{ display: 'flex', gap: '18px', flex: 1 }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '18px', flex: 1 }}>
 
                 {/* ── FileViewer ── */}
                 <div
@@ -350,7 +352,7 @@ const PreviewPage = (): ReactElement => {
                         display:        'flex',
                         alignItems:     'center',
                         justifyContent: 'center',
-                        minHeight:      '480px',
+                        minHeight:      isMobile ? '280px' : '480px',
                         position:       'relative',
                     }}
                 >
@@ -452,7 +454,7 @@ const PreviewPage = (): ReactElement => {
                     <div
                         className="fade"
                         style={{
-                            width:         '256px',
+                            width:         isMobile ? '100%' : '256px',
                             flexShrink:    0,
                             background:    'var(--surface)',
                             borderRadius:  '18px',

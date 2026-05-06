@@ -6,6 +6,7 @@ use App\Entity\Folder;
 use App\Repository\FileRepository;
 use App\Repository\FolderRepository;
 use App\Service\Folder\ZipGenerator;
+use App\Service\Storage\FileStorageInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -19,13 +20,15 @@ class ZipGeneratorTest extends TestCase
 {
     private FileRepository&MockObject $fileRepository;
     private FolderRepository&MockObject $folderRepository;
+    private FileStorageInterface&MockObject $fileStorage;
     private ZipGenerator $zipGenerator;
 
     protected function setUp(): void
     {
         $this->fileRepository   = $this->createMock(FileRepository::class);
         $this->folderRepository = $this->createMock(FolderRepository::class);
-        $this->zipGenerator = new ZipGenerator($this->fileRepository, $this->folderRepository);
+        $this->fileStorage      = $this->createMock(FileStorageInterface::class);
+        $this->zipGenerator = new ZipGenerator($this->fileRepository, $this->folderRepository, $this->fileStorage);
     }
 
     private function buildFolder(string $name): Folder
