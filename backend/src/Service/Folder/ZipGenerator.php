@@ -3,19 +3,21 @@
 namespace App\Service\Folder;
 
 use App\Entity\Folder;
-use App\Entity\User;
 use App\Repository\FileRepository;
 use App\Repository\FolderRepository;
+use App\Service\Storage\FileStorageInterface;
 
 class ZipGenerator
 {
     public function __construct(
         private FileRepository $fileRepository,
         private FolderRepository $folderRepository,
+        private FileStorageInterface $fileStorage,
     ) {}
 
     /**
-     * Génère un fichier ZIP d'un dossier et retourne le chemin du fichier temporaire
+     * Génère un fichier ZIP d'un dossier et retourne le chemin du fichier temporaire.
+     * Fonctionne avec le stockage local ET Azure Blob Storage.
      */
     public function generateFolderZip(Folder $folder): string
     {
@@ -43,29 +45,41 @@ class ZipGenerator
     }
 
     /**
-     * Ajoute récursivement le contenu d'un dossier dans le ZIP
+     * Ajoute récursivement le contenu d'un dossier dans le ZIP.
+     * Utilise FileStorageInterface pour supporter local et Azure Blob Storage.
      */
     private function addFolderToZip(\ZipArchive $zip, Folder $folder, string $zipPath): void
     {
-        // Ajouter un dossier vide dans le ZIP
         $zip->addEmptyDir($zipPath);
 
-        // Ajouter les fichiers du dossier courant
         $files = $this->fileRepository->findBy([
-            'folder' => $folder,
+            'folder'    => $folder,
             'isDeleted' => false,
         ]);
 
         foreach ($files as $file) {
-            $physicalPath = $file->getPath();
-            if (file_exists($physicalPath)) {
-                $zip->addFile($physicalPath, $zipPath . '/' . $file->getName());
+            if (!$this->fileStorage->exists($file)) {
+                continue;
+            }
+
+            $stream = $this->fileStorage->getStream($file);
+
+            if (is_resource($stream)) {
+                $content = stream_get_contents($stream);
+                fclose($stream);
+            } elseif ($stream instanceof \Psr\Http\Message\StreamInterface) {
+                $content = $stream->getContents();
+            } else {
+                continue;
+            }
+
+            if ($content !== false && $content !== '') {
+                $zip->addFromString($zipPath . '/' . $file->getName(), $content);
             }
         }
 
-        // Ajouter récursivement les sous-dossiers
         $subFolders = $this->folderRepository->findBy([
-            'parent' => $folder,
+            'parent'    => $folder,
             'isDeleted' => false,
         ]);
 

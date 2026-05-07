@@ -20,6 +20,7 @@ class AuthControllerTest extends AbstractFunctionalTest
         $this->publicJson('POST', '/api/auth/register', [
             'email'    => 'newuser@example.com',
             'password' => 'password123',
+            'consent'  => true,
         ]);
 
         $this->assertSame(201, $this->getStatusCode());
@@ -36,6 +37,7 @@ class AuthControllerTest extends AbstractFunctionalTest
             'password'  => 'password123',
             'firstName' => 'Abdoulaye',
             'lastName'  => 'FOFANA',
+            'consent'   => true,
         ]);
 
         $this->assertSame(201, $this->getStatusCode());
@@ -49,6 +51,7 @@ class AuthControllerTest extends AbstractFunctionalTest
         $this->publicJson('POST', '/api/auth/register', [
             'email'    => 'quota@example.com',
             'password' => 'securepass',
+            'consent'  => true,
         ]);
 
         $data = $this->getResponseData();
@@ -114,6 +117,7 @@ class AuthControllerTest extends AbstractFunctionalTest
         $this->publicJson('POST', '/api/auth/register', [
             'email'    => 'existing@example.com',
             'password' => 'anotherpassword',
+            'consent'  => true,
         ]);
 
         $this->assertSame(409, $this->getStatusCode());
@@ -127,6 +131,7 @@ class AuthControllerTest extends AbstractFunctionalTest
         $this->publicJson('POST', '/api/auth/register', [
             'email'    => 'exact8@example.com',
             'password' => '12345678',
+            'consent'  => true,
         ]);
 
         $this->assertSame(201, $this->getStatusCode());
@@ -137,10 +142,24 @@ class AuthControllerTest extends AbstractFunctionalTest
         $this->publicJson('POST', '/api/auth/register', [
             'email'    => 'Upper@Example.COM',
             'password' => 'password123',
+            'consent'  => true,
         ]);
 
         // Le contrôleur utilise filter_var qui accepte les majuscules
         $this->assertSame(201, $this->getStatusCode());
+    }
+
+    // POST /api/auth/register — Consentement RGPD
+    public function testRegisterWithoutConsentReturns422(): void
+    {
+        $this->publicJson('POST', '/api/auth/register', [
+            'email'    => 'noconsent@example.com',
+            'password' => 'password123',
+        ]);
+
+        $this->assertSame(422, $this->getStatusCode());
+        $data = $this->getResponseData();
+        $this->assertArrayHasKey('error', $data);
     }
 
     // POST /api/auth/login — Happy Path

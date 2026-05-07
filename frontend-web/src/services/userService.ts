@@ -92,3 +92,11 @@ export const uploadAvatar = async (
 
     return response.data.user;
 };
+
+/**
+ * Supprime définitivement le compte de l'utilisateur connecté (RGPD).
+ * DELETE /api/user/me
+ */
+export const deleteAccount = async (): Promise<void> => {
+    await apiClient.delete('/user/me');
+};

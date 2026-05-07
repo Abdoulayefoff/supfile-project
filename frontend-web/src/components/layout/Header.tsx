@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Moon, Sun, Settings, LogOut } from 'lucide-react';
+import { Search, Moon, Sun, Settings, LogOut, Menu } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 
 interface HeaderProps {
     isDark: boolean;
     onToggleDark: () => void;
+    onMenuToggle?: () => void;
+    isMobile?: boolean;
 }
 
-export const Header = ({ isDark, onToggleDark }: HeaderProps): ReactElement => {
+export const Header = ({ isDark, onToggleDark, onMenuToggle, isMobile = false }: HeaderProps): ReactElement => {
     const navigate = useNavigate();
     const user = useAuthStore((s) => s.user);
     const logout = useAuthStore((s) => s.logout);
@@ -67,6 +69,18 @@ export const Header = ({ isDark, onToggleDark }: HeaderProps): ReactElement => {
             padding: '0 22px',
             gap: '16px',
         }}>
+
+            {/* ── Hamburger button (mobile only) ── */}
+            {isMobile && (
+                <button
+                    style={iconBtnStyle}
+                    onClick={onMenuToggle}
+                    aria-label="Ouvrir le menu"
+                    type="button"
+                >
+                    <Menu size={22} />
+                </button>
+            )}
 
             {/* ── Logo ── */}
             <div
@@ -186,7 +200,7 @@ export const Header = ({ isDark, onToggleDark }: HeaderProps): ReactElement => {
                     >
                         {user?.avatar ? (
                             <img
-                                src={`${(import.meta.env.VITE_API_URL as string).replace(/\/api$/, '')}${user.avatar}`}
+                                src={user.avatar}
                                 alt="avatar"
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />

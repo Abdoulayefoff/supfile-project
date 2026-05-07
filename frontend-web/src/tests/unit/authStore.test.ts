@@ -53,12 +53,19 @@ describe('authStore — setAuth()', () => {
         expect(state.isAuthenticated).toBe(true);
     });
 
-    it('persiste dans localStorage quand rememberMe=true (défaut)', () => {
+    it('persiste dans sessionStorage quel que soit rememberMe', () => {
         const user = makeUser();
         useAuthStore.getState().setAuth('tok123', user);
 
-        expect(localStorage.getItem('jwt_token')).toBe('tok123');
-        expect(JSON.parse(localStorage.getItem('sf_user')!)).toEqual(user);
+        expect(sessionStorage.getItem('jwt_token')).toBe('tok123');
+        expect(JSON.parse(sessionStorage.getItem('sf_user')!)).toEqual(user);
+    });
+
+    it('ne met jamais le token dans localStorage', () => {
+        const user = makeUser();
+        useAuthStore.getState().setAuth('tok123', user);
+
+        expect(localStorage.getItem('jwt_token')).toBeNull();
     });
 
     it('persiste dans sessionStorage quand rememberMe=false', () => {
@@ -69,27 +76,11 @@ describe('authStore — setAuth()', () => {
         expect(JSON.parse(sessionStorage.getItem('sf_user')!)).toEqual(user);
     });
 
-    it('ne met pas le token dans localStorage quand rememberMe=false', () => {
-        const user = makeUser();
-        useAuthStore.getState().setAuth('tok456', user, false);
-
-        expect(localStorage.getItem('jwt_token')).toBeNull();
-    });
-
-    it('efface sessionStorage lors d\'un login avec rememberMe=true', () => {
-        sessionStorage.setItem('jwt_token', 'old-session-token');
+    it('persiste dans sessionStorage quand rememberMe=true', () => {
         const user = makeUser();
         useAuthStore.getState().setAuth('newtoken', user, true);
 
-        expect(sessionStorage.getItem('jwt_token')).toBeNull();
-    });
-
-    it('efface localStorage lors d\'un login avec rememberMe=false', () => {
-        localStorage.setItem('jwt_token', 'old-local-token');
-        const user = makeUser();
-        useAuthStore.getState().setAuth('newtoken', user, false);
-
-        expect(localStorage.getItem('jwt_token')).toBeNull();
+        expect(sessionStorage.getItem('jwt_token')).toBe('newtoken');
     });
 });
 
@@ -107,14 +98,14 @@ describe('authStore — setUser()', () => {
         expect(useAuthStore.getState().token).toBe('tok');
     });
 
-    it('met à jour sf_user dans localStorage quand le token y est', () => {
+    it('met à jour sf_user dans sessionStorage', () => {
         const user = makeUser();
-        useAuthStore.getState().setAuth('tok', user, true);
+        useAuthStore.getState().setAuth('tok', user);
 
         const updated = makeUser({ email: 'new@example.com' });
         useAuthStore.getState().setUser(updated);
 
-        expect(JSON.parse(localStorage.getItem('sf_user')!).email).toBe('new@example.com');
+        expect(JSON.parse(sessionStorage.getItem('sf_user')!).email).toBe('new@example.com');
     });
 
     it('met à jour sf_user dans sessionStorage quand le token y est', () => {

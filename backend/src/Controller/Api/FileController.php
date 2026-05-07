@@ -8,11 +8,13 @@ use App\Repository\FolderRepository;
 use App\Security\Voter\FileVoter;
 use App\Security\Voter\FolderVoter;
 use App\Service\File\FileManager;
+use App\Service\Storage\FileStorageInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/files', name: 'api_files_')]
@@ -21,7 +23,8 @@ class FileController extends AbstractController
     public function __construct(
         private FileManager $fileManager,
         private FileRepository $fileRepository,
-        private FolderRepository $folderRepository
+        private FolderRepository $folderRepository,
+        private FileStorageInterface $fileStorage
     ) {}
 
     /**
@@ -115,24 +118,37 @@ class FileController extends AbstractController
      * Supporte le header Range pour le streaming audio/vidéo.
      */
     #[Route('/{id}/preview', name: 'preview', methods: ['GET'])]
-    public function preview(File $file, Request $request): BinaryFileResponse
+    public function preview(File $file): Response
     {
         $this->denyAccessUnlessGranted(FileVoter::VIEW, $file);
 
-        $path = $file->getPath();
-
-        if (!file_exists($path)) {
+        if (!$this->fileStorage->exists($file)) {
             throw $this->createNotFoundException('Fichier introuvable sur le serveur.');
         }
 
-        $response = new BinaryFileResponse($path);
-        $response->headers->set('Content-Type', $file->getMimeType());
-        $response->headers->set('Accept-Ranges', 'bytes');
-        $response->setContentDisposition(
-            ResponseHeaderBag::DISPOSITION_INLINE,
-            $file->getName()
+        $stream   = $this->fileStorage->getStream($file);
+        $mimeType = $file->getMimeType();
+        $name     = $file->getName();
+
+        $response = new StreamedResponse(static function () use ($stream): void {
+            if (is_resource($stream)) {
+                // LocalFileStorage — resource PHP natif
+                fpassthru($stream);
+                fclose($stream);
+            } elseif ($stream instanceof \Psr\Http\Message\StreamInterface) {
+                // AzureBlobStorage — PSR-7 StreamInterface (GuzzleHttp)
+                while (!$stream->eof()) {
+                    echo $stream->read(8192);
+                }
+            }
+        });
+
+        $response->headers->set('Content-Type', $mimeType);
+        $response->headers->set('Content-Disposition',
+            'inline; filename="' . addslashes($name) . '"'
         );
-        $response->prepare($request);
+        $response->headers->set('Content-Length', (string) $file->getSize());
+        $response->headers->set('Accept-Ranges', 'bytes');
 
         return $response;
     }
@@ -142,21 +158,35 @@ class FileController extends AbstractController
      * Télécharge un fichier.
      */
     #[Route('/{id}', name: 'download', methods: ['GET'])]
-    public function download(File $file): BinaryFileResponse
+    public function download(File $file): Response
     {
         $this->denyAccessUnlessGranted(FileVoter::VIEW, $file);
 
-        $path = $file->getPath();
-
-        if (!file_exists($path)) {
+        if (!$this->fileStorage->exists($file)) {
             throw $this->createNotFoundException('Fichier introuvable sur le serveur.');
         }
 
-        $response = new BinaryFileResponse($path);
-        $response->setContentDisposition(
-            ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-            $file->getName()
+        $stream = $this->fileStorage->getStream($file);
+        $name   = $file->getName();
+
+        $response = new StreamedResponse(static function () use ($stream): void {
+            if (is_resource($stream)) {
+                // LocalFileStorage — resource PHP natif
+                fpassthru($stream);
+                fclose($stream);
+            } elseif ($stream instanceof \Psr\Http\Message\StreamInterface) {
+                // AzureBlobStorage — PSR-7 StreamInterface (GuzzleHttp)
+                while (!$stream->eof()) {
+                    echo $stream->read(8192);
+                }
+            }
+        });
+
+        $response->headers->set('Content-Type', $file->getMimeType());
+        $response->headers->set('Content-Disposition',
+            ResponseHeaderBag::DISPOSITION_ATTACHMENT . '; filename="' . addslashes($name) . '"'
         );
+        $response->headers->set('Content-Length', (string) $file->getSize());
 
         return $response;
     }

@@ -10,17 +10,10 @@ parameters:
     locale: 'en'
 
 services:
-    # default configuration for services in *this* file
     _defaults:
-        autowire: true      # Automatically injects dependencies in your services.
-        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        autowire: true
+        autoconfigure: true
 
-    # makes classes in src/ available to be used as services
-    # this creates a service per class whose id is the fully-qualified class name
-    App\Service\Storage\FileStorageInterface:
-        class: App\Service\Storage\LocalFileStorage
-        arguments:
-            $projectDir: '%kernel.project_dir%'
     App\:
         resource: '../src/'
         exclude:
@@ -28,11 +21,32 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
-    # controllers are imported separately to make sure services can be injected
-    # as action arguments even if you don't extend any base controller class
     App\Controller\:
         resource: '../src/Controller/'
         tags: ['controller.service_arguments']
 
-    # add more service definitions when explicit configuration is needed
-    # please note that last definitions always *replace* previous ones
+    # ── Stockage local (développement)
+    App\Service\Storage\LocalFileStorage:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
+    # ── Stockage Azure Blob (production)
+    App\Service\Storage\AzureBlobStorage:
+        arguments:
+            $connectionString: '%env(AZURE_STORAGE_CONNECTION_STRING)%'
+            $container:        '%env(AZURE_STORAGE_CONTAINER)%'
+
+    # ── Factory : choisit l'implémentation selon STORAGE_DRIVER
+    # STORAGE_DRIVER=local en dev, STORAGE_DRIVER=azure en prod (Azure App Service)
+    App\Service\Storage\StorageFactory:
+        arguments:
+            $storageDriver: '%env(STORAGE_DRIVER)%'
+
+    # ── L'interface est résolue via la factory
+    App\Service\Storage\FileStorageInterface:
+        factory: ['@App\Service\Storage\StorageFactory', 'create']
+
+    # ── OAuthController : URL de redirection frontend selon l'environnement
+    App\Controller\Api\OAuthController:
+        arguments:
+            $frontendUrl: '%env(default::FRONTEND_URL)%'

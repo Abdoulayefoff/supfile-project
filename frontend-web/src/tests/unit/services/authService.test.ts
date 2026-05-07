@@ -101,6 +101,7 @@ describe('authService.register()', () => {
             password: 'Secret@123',
             firstName: 'Abdoulaye',
             lastName: 'FOFANA',
+            consent: true,
         });
 
         expect(mockedPost).toHaveBeenCalledWith('/auth/register', {
@@ -108,6 +109,7 @@ describe('authService.register()', () => {
             password: 'Secret@123',
             firstName: 'Abdoulaye',
             lastName: 'FOFANA',
+            consent: true,
         });
     });
 
@@ -120,6 +122,7 @@ describe('authService.register()', () => {
             password: 'Secret@123',
             firstName: 'Abdoulaye',
             lastName: 'FOFANA',
+            consent: true,
         });
 
         expect(result.token).toBe('jwt-new');
@@ -135,6 +138,7 @@ describe('authService.register()', () => {
                 password: 'Secret@123',
                 firstName: 'Abdou',
                 lastName: 'FOF',
+                consent: true,
             })
         ).rejects.toMatchObject({ response: { status: 409 } });
     });

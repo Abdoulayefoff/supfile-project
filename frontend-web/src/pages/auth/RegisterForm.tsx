@@ -6,6 +6,8 @@ import { useNavigate }  from 'react-router-dom';
 import { useRegister }  from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 import { OAuthButtons } from '@/components/ui/OAuthButtons';
+import { LegalModal }   from '@/components/ui/LegalModal';
+import type { LegalSlug } from '@/services/legalService';
 
 // ── Schéma de validation Zod 
 // Validation du format uniquement — la logique métier reste côté API
@@ -15,6 +17,7 @@ const registerSchema = z.object({
     email: z.string().email('Email invalide'),
     password: z.string().min(8, 'Minimum 8 caractères'),
     confirmPassword: z.string().min(1, 'Confirmation requise'),
+    consent: z.boolean().refine((val) => val === true, { message: 'Vous devez accepter les conditions d\'utilisation' }),
 }).refine((data) => data.password === data.confirmPassword, {
     message: 'Les mots de passe ne correspondent pas',
     path: ['confirmPassword'],
@@ -37,6 +40,9 @@ export const RegisterForm = ({ onSwitchMode }: RegisterFormProps): ReactElement 
     // Erreur retournée par l'API (ex: "Email déjà utilisé")
     const [apiError, setApiError] = useState<string | null>(null);
 
+    // Slug du document légal à afficher (null = modal fermée)
+    const [legalSlug, setLegalSlug] = useState<LegalSlug | null>(null);
+
     // ── React Hook Form ──
     const {
         register,
@@ -56,11 +62,16 @@ export const RegisterForm = ({ onSwitchMode }: RegisterFormProps): ReactElement 
                 password:  data.password,
                 firstName: data.firstName,
                 lastName:  data.lastName,
+                consent:   data.consent,
             });
             navigate('/dashboard');
         } catch (error: unknown) {
-            const err = error as { response?: { data?: { message?: string } } };
-            setApiError(err.response?.data?.message ?? 'Une erreur est survenue');
+            const err = error as { response?: { data?: { error?: string; message?: string } } };
+            setApiError(
+                err.response?.data?.error ??
+                err.response?.data?.message ??
+                'Une erreur est survenue'
+            );
         }
     };
 
@@ -149,7 +160,7 @@ export const RegisterForm = ({ onSwitchMode }: RegisterFormProps): ReactElement 
                             <input
                                 {...register('firstName')}
                                 type="text"
-                                placeholder="Abdoulaye"
+                                placeholder="Votre prénom"
                                 className="sf-input"
                                 style={inputStyle}
                                 autoComplete="given-name"
@@ -168,7 +179,7 @@ export const RegisterForm = ({ onSwitchMode }: RegisterFormProps): ReactElement 
                             <input
                                 {...register('lastName')}
                                 type="text"
-                                placeholder="Fofana"
+                                placeholder="Votre nom"
                                 className="sf-input"
                                 style={inputStyle}
                                 autoComplete="family-name"
@@ -188,7 +199,7 @@ export const RegisterForm = ({ onSwitchMode }: RegisterFormProps): ReactElement 
                         <input
                             {...register('email')}
                             type="email"
-                            placeholder="vous@exemple.com"
+                            placeholder="votre@email.com"
                             className="sf-input"
                             style={inputStyle}
                             autoComplete="email"
@@ -279,6 +290,38 @@ export const RegisterForm = ({ onSwitchMode }: RegisterFormProps): ReactElement 
                     </div>
                 </div>
 
+                {/* ── Consentement RGPD ── */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                        <input
+                            {...register('consent')}
+                            type="checkbox"
+                            style={{ marginTop: '2px', accentColor: '#005bbf', width: '15px', height: '15px', flexShrink: 0 }}
+                        />
+                        <span style={{ fontSize: '12px', color: '#414754', lineHeight: 1.5 }}>
+                            J'ai lu et j'accepte les{' '}
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); e.preventDefault(); setLegalSlug('terms'); }}
+                                style={{ color: '#005bbf', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '12px', fontFamily: 'Inter, sans-serif' }}
+                            >
+                                Conditions d'utilisation
+                            </button>{' '}
+                            et la{' '}
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); e.preventDefault(); setLegalSlug('privacy'); }}
+                                style={{ color: '#005bbf', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '12px', fontFamily: 'Inter, sans-serif' }}
+                            >
+                                Politique de confidentialité
+                            </button>
+                        </span>
+                    </label>
+                    {errors.consent && (
+                        <span style={errorStyle}>{errors.consent.message}</span>
+                    )}
+                </div>
+
                 {/* Message d'erreur API */}
                 {apiError && (
                     <div style={{
@@ -324,6 +367,10 @@ export const RegisterForm = ({ onSwitchMode }: RegisterFormProps): ReactElement 
                     Se connecter
                 </button>
             </p>
+
+            {legalSlug && (
+                <LegalModal slug={legalSlug} onClose={() => setLegalSlug(null)} />
+            )}
         </>
     );
 };

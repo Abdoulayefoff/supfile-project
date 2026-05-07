@@ -4,7 +4,7 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
-use App\Service\User\UserManager;
+use App\Service\Storage\FileStorageInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -12,7 +12,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -23,10 +22,9 @@ class UserController extends AbstractController
     public function __construct(
         private EntityManagerInterface $em,
         private UserPasswordHasherInterface $passwordHasher,
-        private UserManager $userManager,
         private UserRepository $userRepository,
         private JWTTokenManagerInterface $jwtManager,
-        #[Autowire('%kernel.project_dir%')] private string $projectDir,
+        private FileStorageInterface $fileStorage,
     ) {}
 
     /**
@@ -143,7 +141,8 @@ class UserController extends AbstractController
 
     /**
      * POST /api/user/me/avatar
-     * Upload d'avatar
+     * Upload d'avatar — redimensionné à 200×200 et stocké en base64 en base de données.
+     * Aucune dépendance filesystem : fonctionne identiquement en local et en production Azure.
      */
     #[Route('/me/avatar', name: 'avatar', methods: ['POST'])]
     public function uploadAvatar(Request $request): JsonResponse
@@ -160,7 +159,6 @@ class UserController extends AbstractController
             );
         }
 
-        // Vérifier que c'est bien une image
         $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         if (!in_array($file->getMimeType(), $allowedMimes)) {
             return $this->json(
@@ -169,7 +167,6 @@ class UserController extends AbstractController
             );
         }
 
-        // Vérifier la taille (max 2 Mo)
         if ($file->getSize() > 2 * 1024 * 1024) {
             return $this->json(
                 ['error' => 'L\'avatar ne doit pas dépasser 2 Mo'],
@@ -177,30 +174,102 @@ class UserController extends AbstractController
             );
         }
 
-        // Supprimer l'ancien avatar si existant
-        if ($user->getAvatar()) {
-            $oldPath = $this->projectDir . '/public/storage/avatars/' . $user->getAvatar();
-            if (file_exists($oldPath)) {
-                unlink($oldPath);
-            }
+        // Lire et décoder l'image avec GD (supporte JPEG, PNG, GIF, WebP)
+        $imageContent = file_get_contents($file->getPathname());
+        if ($imageContent === false) {
+            return $this->json(['error' => 'Impossible de lire l\'image'], Response::HTTP_BAD_REQUEST);
         }
 
-        // Sauvegarder le nouvel avatar dans le répertoire public (accessible directement par le navigateur)
-        $avatarDir = $this->projectDir . '/public/storage/avatars/';
-        if (!is_dir($avatarDir)) {
-            mkdir($avatarDir, 0755, true);
+        $source = imagecreatefromstring($imageContent);
+        if ($source === false) {
+            return $this->json(['error' => 'Format d\'image invalide'], Response::HTTP_BAD_REQUEST);
         }
 
-        $filename = bin2hex(random_bytes(16)) . '_' . $user->getId() . '.' . $file->guessExtension();
-        $file->move($avatarDir, $filename);
+        // Calculer les dimensions cibles (max 200×200, ratio conservé)
+        $origWidth  = imagesx($source);
+        $origHeight = imagesy($source);
+        $maxSize    = 200;
 
-        $user->setAvatar($filename);
+        if ($origWidth >= $origHeight) {
+            $newWidth  = $maxSize;
+            $newHeight = (int) max(1, round($maxSize * $origHeight / $origWidth));
+        } else {
+            $newHeight = $maxSize;
+            $newWidth  = (int) max(1, round($maxSize * $origWidth / $origHeight));
+        }
+
+        // Créer le canvas avec fond blanc (évite les artefacts noirs sur PNG/WebP transparents)
+        $canvas = imagecreatetruecolor($newWidth, $newHeight);
+        $white  = imagecolorallocate($canvas, 255, 255, 255);
+        imagefill($canvas, 0, 0, $white);
+
+        imagecopyresampled($canvas, $source, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight);
+        imagedestroy($source);
+
+        // Encoder en JPEG (qualité 85) et capturer le résultat en mémoire
+        ob_start();
+        imagejpeg($canvas, null, 85);
+        $jpeg = ob_get_clean();
+        imagedestroy($canvas);
+
+        if ($jpeg === false || $jpeg === '') {
+            return $this->json(['error' => 'Erreur lors de l\'encodage de l\'image'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        // Stocker directement en base de données en tant que data URI base64
+        $user->setAvatar('data:image/jpeg;base64,' . base64_encode($jpeg));
         $this->em->flush();
 
         return $this->json([
             'message' => 'Avatar mis à jour avec succès',
             'user'    => $this->formatUser($user),
         ]);
+    }
+
+    /**
+     * DELETE /api/user/me
+     * Supprime définitivement le compte et toutes les données associées (RGPD).
+     */
+    #[Route('/me', name: 'delete', methods: ['DELETE'])]
+    public function deleteAccount(): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        // 1. Supprimer les fichiers physiques du stockage
+        foreach ($user->getFiles() as $file) {
+            try {
+                $this->fileStorage->deleteFile($file);
+            } catch (\Throwable) {
+                // On continue même si un fichier est introuvable en stockage
+            }
+        }
+
+        // 2. Supprimer les partages (FK → users + files + folders)
+        $this->em->createQuery('DELETE FROM App\Entity\Share s WHERE s.createdBy = :user')
+            ->setParameter('user', $user)
+            ->execute();
+
+        // 3. Supprimer les fichiers (FK → users + folders)
+        $this->em->createQuery('DELETE FROM App\Entity\File f WHERE f.owner = :user')
+            ->setParameter('user', $user)
+            ->execute();
+
+        // 4. Casser les relations parent/enfant (FK auto-référentielle folders)
+        $this->em->createQuery('UPDATE App\Entity\Folder fo SET fo.parent = NULL WHERE fo.owner = :user')
+            ->setParameter('user', $user)
+            ->execute();
+
+        // 5. Supprimer les dossiers
+        $this->em->createQuery('DELETE FROM App\Entity\Folder fo WHERE fo.owner = :user')
+            ->setParameter('user', $user)
+            ->execute();
+
+        // 6. Supprimer l'utilisateur
+        $this->em->remove($user);
+        $this->em->flush();
+
+        return $this->json(['message' => 'Compte supprimé avec succès'], Response::HTTP_OK);
     }
 
     /**
@@ -214,7 +283,7 @@ class UserController extends AbstractController
             'firstName' => $user->getFirstName(),
             'lastName' => $user->getLastName(),
             'fullName' => $user->getFullName(),
-            'avatar' => $user->getAvatar() ? '/storage/avatars/' . $user->getAvatar() : null,
+            'avatar' => $user->getAvatar(),
             'quotaUsed' => $user->getQuotaUsed(),
             'quotaLimit' => $user->getQuotaLimit(),
             'quotaPercentage' => $user->getQuotaPercentage(),
