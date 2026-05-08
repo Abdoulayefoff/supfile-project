@@ -632,13 +632,59 @@ const InlineViewer = ({
     }
 
     // ── Vidéo ── (CSP media-src autorise https://api.supfile-cloud.fr)
+    // Sur Android Chrome, le streaming vidéo nécessite le support Range côté serveur.
+    // On ouvre directement dans le lecteur natif Android via un onglet.
     if (mimeType.startsWith('video/')) {
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        if (isAndroid) {
+            return (
+                <div
+                    style={{
+                        background:     'var(--low)',
+                        borderRadius:   '14px',
+                        padding:        '24px',
+                        display:        'flex',
+                        flexDirection:  'column',
+                        alignItems:     'center',
+                        gap:            '16px',
+                    }}
+                >
+                    <MaterialIcon n="play_circle" s={48} c="#005bbf" />
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', textAlign: 'center' }}>
+                        {name}
+                    </div>
+                    <a
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            display:        'flex',
+                            alignItems:     'center',
+                            gap:            '6px',
+                            background:     'linear-gradient(135deg,#005bbf,#1a73e8)',
+                            borderRadius:   '9999px',
+                            padding:        '10px 22px',
+                            fontSize:       '14px',
+                            fontWeight:     600,
+                            color:          'white',
+                            fontFamily:     'Inter, sans-serif',
+                            textDecoration: 'none',
+                            boxShadow:      '0 4px 16px rgba(0,91,191,.28)',
+                        }}
+                    >
+                        <MaterialIcon n="play_arrow" s={16} c="white" />
+                        Lire la vidéo
+                    </a>
+                </div>
+            );
+        }
         return (
             <div style={{ background: 'var(--low)', borderRadius: '14px', overflow: 'hidden' }}>
                 <video
                     controls
                     style={{ width: '100%', display: 'block', maxHeight: '400px' }}
                     preload="metadata"
+                    playsInline
                 >
                     <source src={previewUrl} type={mimeType} />
                 </video>
@@ -647,7 +693,51 @@ const InlineViewer = ({
     }
 
     // ── Audio ── (CSP media-src autorise https://api.supfile-cloud.fr)
+    // Même raison que la vidéo : ouvrir dans le lecteur natif Android.
     if (mimeType.startsWith('audio/')) {
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        if (isAndroid) {
+            return (
+                <div
+                    style={{
+                        background:     'var(--low)',
+                        borderRadius:   '14px',
+                        padding:        '24px',
+                        display:        'flex',
+                        flexDirection:  'column',
+                        alignItems:     'center',
+                        gap:            '16px',
+                    }}
+                >
+                    <MaterialIcon n="music_note" s={48} c="#9e4300" />
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', textAlign: 'center' }}>
+                        {name}
+                    </div>
+                    <a
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            display:        'flex',
+                            alignItems:     'center',
+                            gap:            '6px',
+                            background:     'linear-gradient(135deg,#9e4300,#f97316)',
+                            borderRadius:   '9999px',
+                            padding:        '10px 22px',
+                            fontSize:       '14px',
+                            fontWeight:     600,
+                            color:          'white',
+                            fontFamily:     'Inter, sans-serif',
+                            textDecoration: 'none',
+                            boxShadow:      '0 4px 16px rgba(158,67,0,.28)',
+                        }}
+                    >
+                        <MaterialIcon n="headphones" s={16} c="white" />
+                        Écouter
+                    </a>
+                </div>
+            );
+        }
         return (
             <div
                 style={{
@@ -669,6 +759,49 @@ const InlineViewer = ({
 
     // ── PDF ── (CSP frame-src autorise https://api.supfile-cloud.fr)
     if (mimeType === 'application/pdf') {
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        if (isAndroid) {
+            return (
+                <div
+                    style={{
+                        background:     'var(--low)',
+                        borderRadius:   '14px',
+                        padding:        '24px',
+                        display:        'flex',
+                        flexDirection:  'column',
+                        alignItems:     'center',
+                        gap:            '16px',
+                    }}
+                >
+                    <MaterialIcon n="picture_as_pdf" s={48} c="#ba1a1a" />
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', textAlign: 'center' }}>
+                        {name}
+                    </div>
+                    <a
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            display:      'flex',
+                            alignItems:   'center',
+                            gap:          '6px',
+                            background:   'linear-gradient(135deg,#005bbf,#1a73e8)',
+                            borderRadius: '9999px',
+                            padding:      '10px 22px',
+                            fontSize:     '14px',
+                            fontWeight:   600,
+                            color:        'white',
+                            fontFamily:   'Inter, sans-serif',
+                            textDecoration: 'none',
+                            boxShadow:    '0 4px 16px rgba(0,91,191,.28)',
+                        }}
+                    >
+                        <MaterialIcon n="open_in_new" s={16} c="white" />
+                        Ouvrir le PDF
+                    </a>
+                </div>
+            );
+        }
         return (
             <div style={{ borderRadius: '14px', overflow: 'hidden', background: 'var(--low)' }}>
                 <iframe
