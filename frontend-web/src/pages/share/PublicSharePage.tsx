@@ -1,7 +1,7 @@
 // Page publique d'accès à un partage — accessible sans compte
 
 import { useState, useCallback, useEffect } from 'react';
-import type { ReactElement }                from 'react';
+import type { ReactElement }                        from 'react';
 import { useParams, useNavigate }           from 'react-router-dom';
 import { MaterialIcon }                  from '@/components/ui/MaterialIcon';
 import { fmtSize, fmtDate, getMimeInfo } from '@/lib/utils';
@@ -578,12 +578,25 @@ interface InlineViewerProps {
     password: string;
 }
 
+const MIME_BY_EXT: Record<string, string> = {
+    mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', avi: 'video/x-msvideo',
+    mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', flac: 'audio/flac', aac: 'audio/aac', m4a: 'audio/mp4',
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+    pdf: 'application/pdf',
+    txt: 'text/plain', md: 'text/plain', csv: 'text/csv', html: 'text/html',
+};
+
 const InlineViewer = ({
     token,
-    mimeType,
+    mimeType: rawMime,
     name,
     password,
 }: InlineViewerProps): ReactElement | null => {
+    const ext = name.split('.').pop()?.toLowerCase() ?? '';
+    const mimeType = (rawMime && rawMime !== 'application/octet-stream')
+        ? rawMime
+        : (MIME_BY_EXT[ext] ?? rawMime ?? '');
+
     const previewUrl = getPublicPreviewUrl(
         token,
         password.trim() || undefined,
@@ -618,68 +631,51 @@ const InlineViewer = ({
         );
     }
 
-    // ── Vidéo ──
+    // ── Vidéo ── (CSP media-src autorise https://api.supfile-cloud.fr)
     if (mimeType.startsWith('video/')) {
         return (
-            <div
-                style={{
-                    background:   'var(--low)',
-                    borderRadius: '14px',
-                    overflow:     'hidden',
-                }}
-            >
+            <div style={{ background: 'var(--low)', borderRadius: '14px', overflow: 'hidden' }}>
                 <video
-                    src={previewUrl}
                     controls
-                    style={{ width: '100%', borderRadius: '10px' }}
-                />
+                    style={{ width: '100%', display: 'block', maxHeight: '400px' }}
+                    preload="metadata"
+                >
+                    <source src={previewUrl} type={mimeType} />
+                </video>
             </div>
         );
     }
 
-    // ── Audio ──
+    // ── Audio ── (CSP media-src autorise https://api.supfile-cloud.fr)
     if (mimeType.startsWith('audio/')) {
         return (
             <div
                 style={{
-                    background:     'var(--low)',
-                    borderRadius:   '14px',
-                    padding:        '24px',
-                    display:        'flex',
-                    flexDirection:  'column',
-                    alignItems:     'center',
-                    gap:            '16px',
+                    background:    'var(--low)',
+                    borderRadius:  '14px',
+                    padding:       '24px',
+                    display:       'flex',
+                    flexDirection: 'column',
+                    alignItems:    'center',
+                    gap:           '16px',
                 }}
             >
                 <MaterialIcon n="music_note" s={48} c="#9e4300" />
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>
-                    {name}
-                </div>
-                <audio controls src={previewUrl} style={{ width: '100%' }} />
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{name}</div>
+                <audio controls src={previewUrl} style={{ width: '100%' }} preload="metadata" />
             </div>
         );
     }
 
-    // ── PDF ──
+    // ── PDF ── (CSP frame-src autorise https://api.supfile-cloud.fr)
     if (mimeType === 'application/pdf') {
         return (
-            <div
-                style={{
-                    background:     'var(--low)',
-                    borderRadius:   '14px',
-                    padding:        '24px',
-                    display:        'flex',
-                    flexDirection:  'column',
-                    alignItems:     'center',
-                    gap:            '8px',
-                    minHeight:      '120px',
-                    justifyContent: 'center',
-                }}
-            >
-                <MaterialIcon n="picture_as_pdf" s={48} c="#ba1a1a" />
-                <span style={{ fontSize: '13px', color: 'var(--muted)' }}>
-                    Aperçu PDF non disponible sans compte
-                </span>
+            <div style={{ borderRadius: '14px', overflow: 'hidden', background: 'var(--low)' }}>
+                <iframe
+                    src={previewUrl}
+                    title={name}
+                    style={{ width: '100%', height: '600px', border: 'none', display: 'block' }}
+                />
             </div>
         );
     }
@@ -689,7 +685,6 @@ const InlineViewer = ({
         return <TextPreview previewUrl={previewUrl} />;
     }
 
-    // Pas de viewer pour les autres types
     return null;
 };
 
