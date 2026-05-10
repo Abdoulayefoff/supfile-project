@@ -8,6 +8,7 @@ import { FileText, Image, Video, Folder } from 'lucide-react';
 import { useAuthStore }                          from '@/stores/authStore';
 import { useUiStore }                            from '@/stores/uiStore';
 import { useDashboardStats, useRecentFiles }     from '@/hooks/useDashboard';
+import { useIsMobile }                           from '@/hooks/useIsMobile';
 import type { StatsByType }                      from '@/services/dashboardService';
 import { fmtSize, fmtDate, getMimeInfo }         from '@/lib/utils';
 import { MaterialIcon }                          from '@/components/ui/MaterialIcon';
@@ -104,6 +105,7 @@ const DonutChart = ({ categories, total }: DonutChartProps): ReactElement => {
 
 const DashboardPage = (): ReactElement => {
     const navigate     = useNavigate();
+    const isMobile     = useIsMobile();
     const user         = useAuthStore((s) => s.user);
     const { openUpload, openNewFolder } = useUiStore();
 
@@ -121,9 +123,8 @@ const DashboardPage = (): ReactElement => {
 
     const categories: StorageCategory[] = buildStorageCategories(stats?.statsByType);
 
-    // URL de l'avatar (backend stocke un chemin relatif comme "/storage/avatars/file.jpg")
-    const avatarBaseUrl = (import.meta.env.VITE_API_URL as string).replace(/\/api$/, '');
-    const avatarUrl     = user?.avatar ? `${avatarBaseUrl}${user.avatar}` : null;
+    // L'avatar est stocké en base64 directement en DB — utilisable directement comme src
+    const avatarUrl = user?.avatar ?? null;
     const avatarLetter  = user?.firstName?.charAt(0).toUpperCase()
         ?? user?.email?.charAt(0).toUpperCase()
         ?? '?';
@@ -192,7 +193,7 @@ const DashboardPage = (): ReactElement => {
             <div
                 style={{
                     display:             'grid',
-                    gridTemplateColumns: '1fr 2fr',
+                    gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr',
                     gap:                 '18px',
                 }}
             >
@@ -487,7 +488,7 @@ const DashboardPage = (): ReactElement => {
                 <div
                     style={{
                         display:             'grid',
-                        gridTemplateColumns: 'repeat(4,1fr)',
+                        gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)',
                         gap:                 '10px',
                     }}
                 >

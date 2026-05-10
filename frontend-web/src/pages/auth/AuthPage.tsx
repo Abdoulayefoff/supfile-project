@@ -3,11 +3,14 @@ import { LoginForm }    from './LoginForm';
 import { RegisterForm } from './RegisterForm';
 import { LegalModal }   from '@/components/ui/LegalModal';
 import type { LegalSlug } from '@/services/legalService';
+import { useIsMobile }  from '@/hooks/useIsMobile';
 
 // Mode actif sur la page auth
 type AuthMode = 'login' | 'register';
 
 export const AuthPage = (): ReactElement => {
+    const isMobile = useIsMobile();
+
     // Contrôle quel formulaire est affiché (login ou register)
     const [mode, setMode] = useState<AuthMode>('login');
 
@@ -105,19 +108,19 @@ export const AuthPage = (): ReactElement => {
                 maxWidth: '940px',
                 background: 'rgba(255,255,255,.88)',
                 backdropFilter: 'blur(24px)',
-                borderRadius: '40px',
+                borderRadius: isMobile ? '24px' : '40px',
                 boxShadow: '0 12px 40px rgba(0,91,191,.10)',
                 overflow: 'hidden',
                 display: 'flex',
                 zIndex: 10,
             }}>
 
-                {/* ── Panneau gauche (décoratif) ── */}
+                {/* ── Panneau gauche (décoratif) — masqué sur mobile ── */}
                 <div style={{
                     flex: '0 0 44%',
                     background: 'linear-gradient(145deg, #1255b8, #1976d2 50%, #2094f3)',
                     padding: '64px 52px',
-                    display: 'flex',
+                    display: isMobile ? 'none' : 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -196,7 +199,7 @@ export const AuthPage = (): ReactElement => {
                 {/* ── Panneau droit (formulaires) ── */}
                 <div style={{
                     flex: 1,
-                    padding: '52px 48px',
+                    padding: isMobile ? '32px 20px' : '52px 48px',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '24px',
@@ -212,32 +215,37 @@ export const AuthPage = (): ReactElement => {
             </div>
 
             {/* ── Footer ── */}
-            <div style={{ display: 'flex', gap: '28px', zIndex: 10 }}>
-                {([
-                    { slug: 'privacy' as LegalSlug, label: 'Confidentialité' },
-                    { slug: 'terms'   as LegalSlug, label: 'Conditions'      },
-                    { slug: 'help'    as LegalSlug, label: 'Aide'            },
-                ]).map(({ slug, label }) => (
-                    <button
-                        key={slug}
-                        type="button"
-                        onClick={() => setLegalSlug(slug)}
-                        style={{
-                            fontSize:       '11px',
-                            fontWeight:     700,
-                            textTransform:  'uppercase',
-                            letterSpacing:  '.10em',
-                            color:          '#414754',
-                            background:     'none',
-                            border:         'none',
-                            cursor:         'pointer',
-                            fontFamily:     'Inter, sans-serif',
-                            padding:        0,
-                        }}
-                    >
-                        {label}
-                    </button>
-                ))}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', zIndex: 10 }}>
+                <span style={{ fontSize: '11px', color: '#727785' }}>
+                    © {new Date().getFullYear()} Supfile SUPINFO — Tous droits réservés
+                </span>
+                <div style={{ display: 'flex', gap: '28px' }}>
+                    {([
+                        { slug: 'privacy' as LegalSlug, label: 'Confidentialité' },
+                        { slug: 'terms'   as LegalSlug, label: 'Conditions'      },
+                        { slug: 'help'    as LegalSlug, label: 'Aide'            },
+                    ]).map(({ slug, label }) => (
+                        <button
+                            key={slug}
+                            type="button"
+                            onClick={() => setLegalSlug(slug)}
+                            style={{
+                                fontSize:       '11px',
+                                fontWeight:     700,
+                                textTransform:  'uppercase',
+                                letterSpacing:  '.10em',
+                                color:          '#414754',
+                                background:     'none',
+                                border:         'none',
+                                cursor:         'pointer',
+                                fontFamily:     'Inter, sans-serif',
+                                padding:        0,
+                            }}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* ── Modal légale (montée uniquement si un slug est sélectionné) ── */}

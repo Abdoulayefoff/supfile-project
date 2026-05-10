@@ -15,7 +15,8 @@ class OAuthController extends AbstractController
 {
     public function __construct(
         private ClientRegistry $clientRegistry,
-        private OAuthService $oauthService
+        private OAuthService $oauthService,
+        private string $frontendUrl = '',
     ) {
     }
 
@@ -151,8 +152,7 @@ class OAuthController extends AbstractController
     {
         return $this->clientRegistry
             ->getClient('microsoft')
-            // User.Read est requis par Microsoft Graph pour l'endpoint /me
-            ->redirect(['openid', 'email', 'profile', 'User.Read'], []);
+            ->redirect(['https://graph.microsoft.com/User.Read'], []);
     }
 
     /**
@@ -184,6 +184,7 @@ class OAuthController extends AbstractController
             'http://localhost:5173',
             'http://127.0.0.1:3000',
             'http://127.0.0.1:5173',
+            'https://www.supfile-cloud.fr',
         ];
 
         $requested = $request->query->get('redirect_uri', '');
@@ -194,8 +195,9 @@ class OAuthController extends AbstractController
             }
         }
 
-        // Fallback sécurisé si la valeur est absente ou non autorisée
-        return 'http://localhost:3000/auth/callback';
+        // Fallback : FRONTEND_URL depuis l'env, sinon la prod
+        $base = rtrim($this->frontendUrl ?: 'https://www.supfile-cloud.fr', '/');
+        return $base . '/auth/callback';
     }
 
     /**

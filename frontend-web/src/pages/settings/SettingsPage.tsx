@@ -8,6 +8,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import type { ReactElement, ChangeEvent } from 'react';
+import { useNavigate }     from 'react-router-dom';
 import { MaterialIcon }    from '@/components/ui/MaterialIcon';
 import { fmtSize }         from '@/lib/utils';
 import { useAuthStore }    from '@/stores/authStore';
@@ -17,6 +18,7 @@ import {
     useChangePassword,
     useUploadAvatar,
     useChangeEmail,
+    useDeleteAccount,
 } from '@/hooks/useUser';
 
 // Types
@@ -37,6 +39,25 @@ const TABS: TabDef[] = [
 // Composant principal
 const SettingsPage = (): ReactElement => {
     const [activeTab, setActiveTab] = useState<Tab>('profile');
+    const navigate = useNavigate();
+    const deleteAccount = useDeleteAccount();
+
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState('');
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+
+    const handleDeleteAccount = async () => {
+        if (deleteConfirm !== 'SUPPRIMER') {
+            setDeleteError('Tapez exactement SUPPRIMER pour confirmer');
+            return;
+        }
+        try {
+            await deleteAccount.mutateAsync();
+            navigate('/auth');
+        } catch {
+            setDeleteError('Une erreur est survenue. Veuillez réessayer.');
+        }
+    };
 
     return (
         <div
@@ -118,6 +139,137 @@ const SettingsPage = (): ReactElement => {
                 {activeTab === 'security'    && <SecurityTab />}
                 {activeTab === 'preferences' && <PreferencesTab />}
             </div>
+
+            {/* ── Zone de danger ── */}
+            <div style={{
+                marginTop:    '32px',
+                borderRadius: '18px',
+                border:       '1px solid rgba(186,26,26,.25)',
+                background:   'rgba(186,26,26,.03)',
+                padding:      '24px 28px',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <MaterialIcon n="warning" s={18} c="#ba1a1a" />
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#ba1a1a' }}>
+                        Zone de danger
+                    </span>
+                </div>
+                <p style={{ fontSize: '13px', color: 'var(--muted)', margin: '0 0 16px' }}>
+                    La suppression de votre compte est définitive et irréversible. Toutes vos données
+                    (fichiers, dossiers, partages) seront supprimées conformément au RGPD.
+                </p>
+                <button
+                    type="button"
+                    onClick={() => { setShowDeleteModal(true); setDeleteError(null); setDeleteConfirm(''); }}
+                    style={{
+                        padding:      '9px 18px',
+                        borderRadius: '10px',
+                        border:       '1px solid rgba(186,26,26,.4)',
+                        background:   'rgba(186,26,26,.07)',
+                        color:        '#ba1a1a',
+                        fontWeight:   600,
+                        fontSize:     '13px',
+                        cursor:       'pointer',
+                        fontFamily:   'Inter, sans-serif',
+                    }}
+                >
+                    Supprimer mon compte
+                </button>
+            </div>
+
+            {/* ── Modal de confirmation suppression ── */}
+            {showDeleteModal && (
+                <div style={{
+                    position:   'fixed',
+                    inset:      0,
+                    background: 'rgba(0,0,0,.45)',
+                    display:    'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex:     200,
+                    padding:    '16px',
+                }}>
+                    <div className="fade" style={{
+                        background:   'var(--surface)',
+                        borderRadius: '20px',
+                        padding:      '32px',
+                        maxWidth:     '420px',
+                        width:        '100%',
+                        boxShadow:    '0 16px 48px rgba(0,0,0,.18)',
+                        border:       '1px solid var(--border)',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                            <MaterialIcon n="delete_forever" s={22} c="#ba1a1a" />
+                            <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>
+                                Supprimer mon compte
+                            </span>
+                        </div>
+                        <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '20px', lineHeight: 1.6 }}>
+                            Cette action est <strong>irréversible</strong>. Tapez{' '}
+                            <strong style={{ color: '#ba1a1a' }}>SUPPRIMER</strong>{' '}
+                            pour confirmer.
+                        </p>
+                        <input
+                            type="text"
+                            placeholder="SUPPRIMER"
+                            value={deleteConfirm}
+                            onChange={(e) => { setDeleteConfirm(e.target.value); setDeleteError(null); }}
+                            className="sf-input"
+                            style={{ width: '100%', marginBottom: '12px', boxSizing: 'border-box' }}
+                        />
+                        {deleteError && (
+                            <div style={{
+                                fontSize:     '12px',
+                                color:        '#ba1a1a',
+                                marginBottom: '12px',
+                                padding:      '8px 12px',
+                                background:   'rgba(186,26,26,.07)',
+                                borderRadius: '8px',
+                            }}>
+                                {deleteError}
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                            <button
+                                type="button"
+                                onClick={() => setShowDeleteModal(false)}
+                                style={{
+                                    padding:      '9px 18px',
+                                    borderRadius: '10px',
+                                    border:       '1px solid var(--border)',
+                                    background:   'var(--mid)',
+                                    color:        'var(--text)',
+                                    fontWeight:   600,
+                                    fontSize:     '13px',
+                                    cursor:       'pointer',
+                                    fontFamily:   'Inter, sans-serif',
+                                }}
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDeleteAccount}
+                                disabled={deleteAccount.isPending}
+                                style={{
+                                    padding:      '9px 18px',
+                                    borderRadius: '10px',
+                                    border:       'none',
+                                    background:   '#ba1a1a',
+                                    color:        'white',
+                                    fontWeight:   600,
+                                    fontSize:     '13px',
+                                    cursor:       deleteAccount.isPending ? 'not-allowed' : 'pointer',
+                                    opacity:      deleteAccount.isPending ? 0.7 : 1,
+                                    fontFamily:   'Inter, sans-serif',
+                                }}
+                            >
+                                {deleteAccount.isPending ? 'Suppression…' : 'Confirmer la suppression'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -229,9 +381,8 @@ const ProfileTab = (): ReactElement => {
         ?? user?.email?.charAt(0).toUpperCase()
         ?? '?';
 
-    // URL absolue de l'avatar (le backend retourne un chemin relatif comme /storage/avatars/file.jpg)
-    const avatarBaseUrl = (import.meta.env.VITE_API_URL as string).replace(/\/api$/, '');
-    const avatarUrl     = user?.avatar ? `${avatarBaseUrl}${user.avatar}` : null;
+    // L'avatar est stocké en base64 directement en DB — utilisable directement comme src
+    const avatarUrl = user?.avatar ?? null;
 
     const isSaving = updateProfile.isPending || changeEmail.isPending;
 

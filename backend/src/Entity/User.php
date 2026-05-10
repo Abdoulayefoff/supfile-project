@@ -39,7 +39,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Groups(['user:read', 'user:write'])]
     private ?string $lastName = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     #[Groups(['user:read', 'user:write'])]
     private ?string $avatar = null;
 
@@ -66,6 +66,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::JSON)]
     #[Groups(['user:read'])]
     private array $roles = [];
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['user:read'])]
+    private ?\DateTimeImmutable $consentAcceptedAt = null;
 
     #[ORM\Column]
     #[Groups(['user:read'])]
@@ -250,6 +254,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setOauthId(?string $oauthId): static
     {
         $this->oauthId = $oauthId;
+        return $this;
+    }
+
+    public function getConsentAcceptedAt(): ?\DateTimeImmutable
+    {
+        return $this->consentAcceptedAt;
+    }
+
+    public function setConsentAcceptedAt(?\DateTimeImmutable $consentAcceptedAt): static
+    {
+        $this->consentAcceptedAt = $consentAcceptedAt;
         return $this;
     }
 

@@ -57,6 +57,8 @@ security:
         - { path: ^/api/auth/register, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/refresh, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/oauth, roles: PUBLIC_ACCESS }  # Routes OAuth (Google, GitHub, Microsoft)
+        - { path: ^/api/auth/forgot-password, roles: PUBLIC_ACCESS }  # ← Reset mot de passe étape 1
+        - { path: ^/api/auth/reset-password, roles: PUBLIC_ACCESS }   # ← Reset mot de passe étape 2
         - { path: ^/api/public, roles: PUBLIC_ACCESS }
         - { path: ^/api/shares/public, roles: PUBLIC_ACCESS }
         - { path: ^/api/legal, roles: PUBLIC_ACCESS }

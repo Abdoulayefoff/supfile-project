@@ -6,6 +6,7 @@ import type { ReactElement } from 'react';
 import { useLegal }          from '@/hooks/useLegal';
 import { MaterialIcon }      from '@/components/ui/MaterialIcon';
 import type { LegalSlug }    from '@/services/legalService';
+import { useIsMobile }       from '@/hooks/useIsMobile';
 
 // Config des slugs
 const SLUG_CONFIG: Record<LegalSlug, { label: string; icon: string }> = {
@@ -22,6 +23,7 @@ interface LegalModalProps {
 
 // Composant principal
 export const LegalModal = ({ slug, onClose }: LegalModalProps): ReactElement => {
+    const isMobile = useIsMobile();
     const { data, isLoading, isError } = useLegal(slug);
     const config = SLUG_CONFIG[slug];
 
@@ -36,9 +38,9 @@ export const LegalModal = ({ slug, onClose }: LegalModalProps): ReactElement => 
                 background:     'rgba(0,0,0,.50)',
                 backdropFilter: 'blur(6px)',
                 display:        'flex',
-                alignItems:     'center',
+                alignItems:     isMobile ? 'flex-end' : 'center',
                 justifyContent: 'center',
-                padding:        '24px',
+                padding:        isMobile ? '0' : '24px',
             }}
         >
             {/* ── Carte ── */}
@@ -47,10 +49,10 @@ export const LegalModal = ({ slug, onClose }: LegalModalProps): ReactElement => 
                 onClick={(e) => e.stopPropagation()}
                 style={{
                     background:   '#ffffff',
-                    borderRadius: '22px',
+                    borderRadius: isMobile ? '22px 22px 0 0' : '22px',
                     width:        '100%',
                     maxWidth:     '680px',
-                    maxHeight:    '80vh',
+                    maxHeight:    isMobile ? '88vh' : '80vh',
                     display:      'flex',
                     flexDirection:'column',
                     boxShadow:    '0 24px 80px rgba(0,0,0,.18)',
@@ -63,7 +65,7 @@ export const LegalModal = ({ slug, onClose }: LegalModalProps): ReactElement => 
                         display:        'flex',
                         justifyContent: 'space-between',
                         alignItems:     'center',
-                        padding:        '22px 28px',
+                        padding:        isMobile ? '16px 18px' : '22px 28px',
                         borderBottom:   '1px solid rgba(193,198,214,.3)',
                         flexShrink:     0,
                     }}
@@ -91,15 +93,20 @@ export const LegalModal = ({ slug, onClose }: LegalModalProps): ReactElement => 
                     <button
                         onClick={onClose}
                         style={{
-                            background:   'none',
+                            background:   'rgba(0,0,0,.06)',
                             border:       'none',
                             cursor:       'pointer',
-                            padding:      '4px',
+                            padding:      '8px',
                             borderRadius: '9999px',
                             display:      'flex',
+                            alignItems:   'center',
+                            justifyContent: 'center',
+                            flexShrink:   0,
+                            minWidth:     '36px',
+                            minHeight:    '36px',
                         }}
                     >
-                        <MaterialIcon n="close" s={18} c="#727785" />
+                        <MaterialIcon n="close" s={20} c="#414754" />
                     </button>
                 </div>
 
@@ -107,7 +114,7 @@ export const LegalModal = ({ slug, onClose }: LegalModalProps): ReactElement => 
                 <div
                     style={{
                         overflowY: 'auto',
-                        padding:   '28px',
+                        padding:   isMobile ? '16px 18px' : '28px',
                         flex:      1,
                     }}
                 >
@@ -153,7 +160,7 @@ export const LegalModal = ({ slug, onClose }: LegalModalProps): ReactElement => 
                 {/* ── Footer (fixe) ── */}
                 <div
                     style={{
-                        padding:        '16px 28px',
+                        padding:        isMobile ? '12px 18px' : '16px 28px',
                         borderTop:      '1px solid rgba(193,198,214,.3)',
                         display:        'flex',
                         justifyContent: 'flex-end',

@@ -6,8 +6,9 @@ import { useNavigate } from 'react-router-dom';
 import { useLogin }    from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 import { OAuthButtons } from '@/components/ui/OAuthButtons';
+import { ForgotPasswordModal } from '@/components/ui/ForgotPasswordModal';
 
-// ── Schéma de validation Zod 
+// ── Schéma de validation Zod
 // Validation du format uniquement — la logique métier reste côté API
 const loginSchema = z.object({
     email: z.string().email('Email invalide'),
@@ -21,8 +22,8 @@ interface LoginFormProps {
 }
 
 export const LoginForm = ({ onSwitchMode }: LoginFormProps): ReactElement => {
-    const navigate       = useNavigate();
-    const loginMutation  = useLogin();
+    const navigate      = useNavigate();
+    const loginMutation = useLogin();
 
     // État local pour afficher/masquer le mot de passe
     const [showPassword, setShowPassword] = useState(false);
@@ -32,6 +33,9 @@ export const LoginForm = ({ onSwitchMode }: LoginFormProps): ReactElement => {
 
     // Erreur retournée par l'API (ex: "Identifiants incorrects")
     const [apiError, setApiError] = useState<string | null>(null);
+
+    // Contrôle l'ouverture/fermeture du modal "Mot de passe oublié"
+    const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
 
     // ── React Hook Form ──
     const {
@@ -61,24 +65,24 @@ export const LoginForm = ({ onSwitchMode }: LoginFormProps): ReactElement => {
     };
 
     const iconStyle: React.CSSProperties = {
-        position: 'absolute',
-        left: '14px',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        fontSize: '18px',
-        color: '#9aa0ae',
+        position:      'absolute',
+        left:          '14px',
+        top:           '50%',
+        transform:     'translateY(-50%)',
+        fontSize:      '18px',
+        color:         '#9aa0ae',
         pointerEvents: 'none',
     };
 
     const inputStyle: React.CSSProperties = {
-        width: '100%',
-        padding: '11px 14px 11px 42px',
+        width:       '100%',
+        padding:     '11px 14px 11px 42px',
         borderRadius: '12px',
-        border: 'none',
-        background: '#f3f4f5',
-        fontSize: '14px',
-        color: '#191c1d',
-        fontFamily: 'Inter, sans-serif',
+        border:      'none',
+        background:  '#f3f4f5',
+        fontSize:    '14px',
+        color:       '#191c1d',
+        fontFamily:  'Inter, sans-serif',
     };
 
     return (
@@ -86,11 +90,11 @@ export const LoginForm = ({ onSwitchMode }: LoginFormProps): ReactElement => {
             {/* ── Titre et sous-titre ── */}
             <div>
                 <h1 style={{
-                    fontSize: '32px',
-                    fontWeight: 800,
+                    fontSize:      '32px',
+                    fontWeight:    800,
                     letterSpacing: '-0.025em',
-                    color: '#191c1d',
-                    marginBottom: '6px',
+                    color:         '#191c1d',
+                    marginBottom:  '6px',
                 }}>
                     Bienvenue
                 </h1>
@@ -106,11 +110,11 @@ export const LoginForm = ({ onSwitchMode }: LoginFormProps): ReactElement => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div style={{ flex: 1, height: '1px', background: 'rgba(193,198,214,.4)' }} />
                 <span style={{
-                    fontSize: '10px',
-                    fontWeight: 700,
+                    fontSize:      '10px',
+                    fontWeight:    700,
                     textTransform: 'uppercase',
                     letterSpacing: '.14em',
-                    color: '#727785',
+                    color:         '#727785',
                 }}>
                     ou via email
                 </span>
@@ -161,15 +165,15 @@ export const LoginForm = ({ onSwitchMode }: LoginFormProps): ReactElement => {
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
                             style={{
-                                position: 'absolute',
-                                right: '14px',
-                                top: '50%',
+                                position:  'absolute',
+                                right:     '14px',
+                                top:       '50%',
                                 transform: 'translateY(-50%)',
                                 background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: '#727785',
-                                padding: 0,
+                                border:    'none',
+                                cursor:    'pointer',
+                                color:     '#727785',
+                                padding:   0,
                             }}
                         >
                             <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
@@ -187,13 +191,13 @@ export const LoginForm = ({ onSwitchMode }: LoginFormProps): ReactElement => {
                 {/* Ligne "Se souvenir / Mot de passe oublié" */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 2px' }}>
                     <label style={{
-                        display: 'flex',
+                        display:    'flex',
                         alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '13px',
+                        gap:        '8px',
+                        fontSize:   '13px',
                         fontWeight: 500,
-                        color: '#414754',
-                        cursor: 'pointer',
+                        color:      '#414754',
+                        cursor:     'pointer',
                     }}>
                         <input
                             type="checkbox"
@@ -204,19 +208,20 @@ export const LoginForm = ({ onSwitchMode }: LoginFormProps): ReactElement => {
                         Se souvenir de moi
                     </label>
 
-                    {/* Bouton désactivé — fonctionnalité non implémentée côté backend */}
+                    {/* Bouton "Mot de passe oublié" — ouvre le modal ForgotPasswordModal */}
                     <button
                         type="button"
-                        disabled
+                        onClick={() => setForgotPasswordOpen(true)}
                         style={{
-                            fontSize: '13px',
+                            fontSize:   '13px',
                             fontWeight: 700,
-                            color: '#9aa0ae',
+                            color:      '#005bbf',
                             background: 'none',
-                            border: 'none',
-                            cursor: 'not-allowed',
+                            border:     'none',
+                            cursor:     'pointer',
+                            fontFamily: 'Inter, sans-serif',
+                            padding:    0,
                         }}
-                        title="Fonctionnalité non disponible"
                     >
                         Mot de passe oublié ?
                     </button>
@@ -225,12 +230,12 @@ export const LoginForm = ({ onSwitchMode }: LoginFormProps): ReactElement => {
                 {/* Message d'erreur API */}
                 {apiError && (
                     <div style={{
-                        padding: '10px 14px',
+                        padding:      '10px 14px',
                         borderRadius: '10px',
-                        background: 'rgba(186,26,26,.08)',
-                        border: '1px solid rgba(186,26,26,.2)',
-                        fontSize: '13px',
-                        color: '#ba1a1a',
+                        background:   'rgba(186,26,26,.08)',
+                        border:       '1px solid rgba(186,26,26,.2)',
+                        fontSize:     '13px',
+                        color:        '#ba1a1a',
                     }}>
                         {apiError}
                     </div>
@@ -256,17 +261,22 @@ export const LoginForm = ({ onSwitchMode }: LoginFormProps): ReactElement => {
                     type="button"
                     onClick={onSwitchMode}
                     style={{
-                        fontSize: '14px',
+                        fontSize:   '14px',
                         fontWeight: 700,
-                        color: '#005bbf',
+                        color:      '#005bbf',
                         background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
+                        border:     'none',
+                        cursor:     'pointer',
                     }}
                 >
                     Créer un compte
                 </button>
             </p>
+
+            {/* Modal "Mot de passe oublié" — rendu conditionnellement */}
+            {forgotPasswordOpen && (
+                <ForgotPasswordModal onClose={() => setForgotPasswordOpen(false)} />
+            )}
         </>
     );
 };

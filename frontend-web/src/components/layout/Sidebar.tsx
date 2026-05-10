@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { useAuthStore }       from '@/stores/authStore';
 import { useUiStore }         from '@/stores/uiStore';
 import { useDashboardStats }  from '@/hooks/useDashboard';
@@ -14,11 +14,22 @@ const NAV_ITEMS = [
     { icon: 'delete',        label: 'Corbeille',  path: '/trash'     },
 ];
 
-export const Sidebar = (): ReactElement => {
+interface SidebarProps {
+    isOpen?: boolean;
+    isMobile?: boolean;
+    onClose?: () => void;
+}
+
+export const Sidebar = ({ isOpen = false, isMobile = false, onClose }: SidebarProps): ReactElement => {
     const navigate = useNavigate();
     const location = useLocation();
     const user = useAuthStore((s) => s.user);
     const { openUpload, openNewFolder } = useUiStore();
+
+    const handleNav = (path: string) => {
+        navigate(path);
+        if (isMobile) onClose?.();
+    };
 
     // Quota depuis les stats API (refetché automatiquement après upload)
     const { data: stats } = useDashboardStats();
@@ -40,17 +51,58 @@ export const Sidebar = (): ReactElement => {
     const quotaLimit   = stats?.quotaLimit ?? user?.quotaLimit ?? 1;
     const quotaPercent = Math.min((quotaUsed / quotaLimit) * 100, 100);
 
-    return (
-        <aside style={{
-            width: '210px',
-            background: 'var(--sidebarBg)',
-            flexShrink: 0,
-            display: 'flex',
+    const asideStyle: React.CSSProperties = isMobile
+        ? {
+            position:   'fixed',
+            top:        0,
+            left:       isOpen ? 0 : '-250px',
+            height:     '100vh',
+            width:      '240px',
+            zIndex:     200,
+            transition: 'left 0.25s ease',
+            boxShadow:  isOpen ? '4px 0 24px rgba(0,0,0,0.15)' : 'none',
+            background:    'var(--sidebarBg)',
+            display:       'flex',
             flexDirection: 'column',
-            padding: '16px 10px',
-            overflowY: 'auto',
-            borderRight: '1px solid var(--border)',
-        }}>
+            padding:       '16px 10px',
+            overflowY:     'auto',
+            borderRight:   '1px solid var(--border)',
+        }
+        : {
+            width:         '210px',
+            background:    'var(--sidebarBg)',
+            flexShrink:    0,
+            display:       'flex',
+            flexDirection: 'column',
+            padding:       '16px 10px',
+            overflowY:     'auto',
+            borderRight:   '1px solid var(--border)',
+        };
+
+    return (
+        <aside style={asideStyle}>
+
+            {/* ── Bouton fermeture (mobile only) ── */}
+            {isMobile && (
+                <button
+                    onClick={onClose}
+                    style={{
+                        alignSelf:      'flex-end',
+                        background:     'none',
+                        border:         'none',
+                        cursor:         'pointer',
+                        color:          'var(--muted)',
+                        padding:        '4px',
+                        borderRadius:   '8px',
+                        marginBottom:   '8px',
+                        display:        'flex',
+                        alignItems:     'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <X size={20} />
+                </button>
+            )}
 
             {/* ── Bouton "Nouveau" avec dropdown ── */}
             <div style={{ padding: '0 4px', marginBottom: '18px', position: 'relative' }}>
@@ -155,7 +207,7 @@ export const Sidebar = (): ReactElement => {
                             key={item.path}
                             className={`nav-item ${isActive ? 'active' : ''}`}
                             style={{ color: isActive ? '#1a73e8' : 'var(--muted)' }}
-                            onClick={() => navigate(item.path)}
+                            onClick={() => handleNav(item.path)}
                         >
                             <span
                                 className="material-symbols-outlined"

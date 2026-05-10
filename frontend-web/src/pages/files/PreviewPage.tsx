@@ -15,6 +15,7 @@ import { MaterialIcon }              from '@/components/ui/MaterialIcon';
 import { getMimeInfo, fmtSize, fmtDate } from '@/lib/utils';
 import { useDownloadFile }           from '@/hooks/useFiles';
 import apiClient                     from '@/lib/axios';
+import { useIsMobile }               from '@/hooks/useIsMobile';
 
 // Types
 
@@ -104,6 +105,7 @@ const PreviewPage = (): ReactElement => {
     const { fileId }               = useParams<{ fileId: string }>();
     const navigate                 = useNavigate();
     const { mutate: downloadFile } = useDownloadFile();
+    const isMobile                 = useIsMobile();
 
     const [showInfo, setShowInfo] = useState(true);
 
@@ -337,7 +339,7 @@ const PreviewPage = (): ReactElement => {
             </div>
 
             {/* ── Zone viewer + panneau info ── */}
-            <div style={{ display: 'flex', gap: '18px', flex: 1 }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '18px', flex: 1 }}>
 
                 {/* ── FileViewer ── */}
                 <div
@@ -350,7 +352,7 @@ const PreviewPage = (): ReactElement => {
                         display:        'flex',
                         alignItems:     'center',
                         justifyContent: 'center',
-                        minHeight:      '480px',
+                        minHeight:      isMobile ? '280px' : '480px',
                         position:       'relative',
                     }}
                 >
@@ -452,7 +454,7 @@ const PreviewPage = (): ReactElement => {
                     <div
                         className="fade"
                         style={{
-                            width:         '256px',
+                            width:         isMobile ? '100%' : '256px',
                             flexShrink:    0,
                             background:    'var(--surface)',
                             borderRadius:  '18px',
@@ -644,16 +646,50 @@ const FileViewer = ({
                 }}
             >
                 {blobUrl ? (
-                    <iframe
-                        src={blobUrl}
-                        title={name}
+                    <object
+                        data={blobUrl}
+                        type="application/pdf"
                         style={{
                             width:        '100%',
                             height:       '520px',
                             border:       'none',
                             borderRadius: '12px',
                         }}
-                    />
+                    >
+                        <div
+                            style={{
+                                display:       'flex',
+                                flexDirection: 'column',
+                                alignItems:    'center',
+                                gap:           '14px',
+                                padding:       '32px',
+                            }}
+                        >
+                            <MaterialIcon n="picture_as_pdf" s={64} c="#ba1a1a" />
+                            <div style={{ fontSize: '15px', color: 'var(--text)' }}>{name}</div>
+                            <button
+                                onClick={onDownload}
+                                style={{
+                                    display:      'flex',
+                                    alignItems:   'center',
+                                    gap:          '6px',
+                                    background:   'linear-gradient(135deg,#005bbf,#1a73e8)',
+                                    border:       'none',
+                                    borderRadius: '9999px',
+                                    padding:      '9px 20px',
+                                    cursor:       'pointer',
+                                    fontSize:     '13px',
+                                    fontWeight:   600,
+                                    color:        'white',
+                                    fontFamily:   'Inter, sans-serif',
+                                    boxShadow:    '0 4px 16px rgba(0,91,191,.28)',
+                                }}
+                            >
+                                <MaterialIcon n="download" s={15} c="white" />
+                                Télécharger
+                            </button>
+                        </div>
+                    </object>
                 ) : (
                     <>
                         <MaterialIcon n="picture_as_pdf" s={64} c="#ba1a1a" />

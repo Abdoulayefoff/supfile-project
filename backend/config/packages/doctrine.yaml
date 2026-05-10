@@ -35,6 +35,13 @@ when@test:
 
 when@prod:
     doctrine:
+        dbal:
+            options:
+                # Azure MySQL Flexible Server requires SSL (require_secure_transport=ON).
+                # 1007 = PDO::MYSQL_ATTR_SSL_CA — Alpine's CA bundle includes DigiCert used by Azure.
+                # 1014 = PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT
+                1007: '/etc/ssl/cert.pem'
+                1014: false
         orm:
             auto_generate_proxy_classes: false
             proxy_dir: '%kernel.build_dir%/doctrine/orm/Proxies'
