@@ -74,6 +74,7 @@ jobs:
           DEFAULT_URI=http://localhost:8000
           FRONTEND_URL=http://localhost:3000
           MAILER_DSN=null://null
+          MAILER_FROM=noreply@supfile-cloud.fr
           MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0
           OAUTH_GOOGLE_CLIENT_ID=ci-placeholder
           OAUTH_GOOGLE_CLIENT_SECRET=ci-placeholder
