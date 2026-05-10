@@ -152,8 +152,7 @@ class OAuthController extends AbstractController
     {
         return $this->clientRegistry
             ->getClient('microsoft')
-            // User.Read est requis par Microsoft Graph pour l'endpoint /me
-            ->redirect(['openid', 'email', 'profile', 'User.Read'], []);
+            ->redirect(['https://graph.microsoft.com/User.Read'], []);
     }
 
     /**

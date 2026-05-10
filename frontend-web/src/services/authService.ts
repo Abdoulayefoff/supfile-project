@@ -1,7 +1,7 @@
 import apiClient from '@/lib/axios';
 import type { User } from '@/types';
 
-// ── Types des requêtes / réponses 
+// ── Types des requêtes / réponses
 interface LoginRequest {
     email: string;
     password: string;
@@ -29,7 +29,7 @@ interface RegisterApiResponse {
     user: User;
 }
 
-// ── Service d'authentification 
+// ── Service d'authentification
 // Contient uniquement les appels HTTP vers l'API Symfony
 // Aucune logique métier — le backend décide de tout
 export const authService = {
@@ -59,5 +59,20 @@ export const authService = {
     getOAuthUrl: (provider: 'google' | 'github' | 'microsoft'): string => {
         const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api';
         return `${apiUrl}/auth/oauth/${provider}`;
+    },
+
+    // POST /api/auth/forgot-password
+    // Envoie un email de réinitialisation à l'adresse fournie.
+    // Le backend retourne toujours 200 même si l'email n'existe pas (anti-énumération).
+    // Ne retourne rien — le frontend affiche un message générique dans tous les cas.
+    forgotPassword: async (email: string): Promise<void> => {
+        await apiClient.post('/auth/forgot-password', { email });
+    },
+
+    // POST /api/auth/reset-password
+    // Soumet le nouveau mot de passe avec le token extrait de l'URL.
+    // Le backend vérifie que le token est valide, non expiré et non encore utilisé.
+    resetPassword: async (token: string, password: string): Promise<void> => {
+        await apiClient.post('/auth/reset-password', { token, password });
     },
 };
