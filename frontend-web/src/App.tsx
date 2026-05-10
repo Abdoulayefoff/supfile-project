@@ -9,6 +9,7 @@ import { useAuthStore }  from '@/stores/authStore';
 // ── Pages publiques ──
 import { AuthPage }          from '@/pages/auth/AuthPage';
 import { OAuthCallbackPage } from '@/pages/auth/OAuthCallbackPage';
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
 import PublicSharePage       from '@/pages/share/PublicSharePage';
 
 // ── Pages protégées ──
@@ -47,12 +48,10 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     if (isAuthenticated && token) {
         return <Navigate to="/dashboard" replace />;
     }
-
     return <>{children}</>;
 };
 
 // Composant principal
-
 export default function App() {
     const logout = useAuthStore((s) => s.logout);
     const user   = useAuthStore((s) => s.user);
@@ -79,7 +78,6 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
             <BrowserRouter>
                 <Routes>
-
                     {/* ── Routes publiques ── */}
 
                     {/* Login / Register */}
@@ -96,6 +94,16 @@ export default function App() {
                     <Route
                         path="/auth/callback"
                         element={<OAuthCallbackPage />}
+                    />
+
+                    {/* Réinitialisation du mot de passe — lien reçu par email avec ?token=... */}
+                    <Route
+                        path="/reset-password"
+                        element={
+                            <PublicRoute>
+                                <ResetPasswordPage />
+                            </PublicRoute>
+                        }
                     />
 
                     {/* Partage public : page standalone sans Header/Sidebar */}
@@ -137,7 +145,7 @@ export default function App() {
                             element={<DrivePage />}
                         />
 
-                        {/* Prévisualisation d'un fichier — Sprint 8 */}
+                        {/* Prévisualisation d'un fichier */}
                         <Route
                             path="drive/preview/:fileId"
                             element={<PreviewPage />}
@@ -155,7 +163,7 @@ export default function App() {
                             element={<SharedPage />}
                         />
 
-                        {/* Paramètres utilisateur — Sprint 8 */}
+                        {/* Paramètres utilisateur */}
                         <Route
                             path="settings"
                             element={<SettingsPage />}
@@ -167,7 +175,6 @@ export default function App() {
                         path="*"
                         element={<Navigate to="/dashboard" replace />}
                     />
-
                 </Routes>
             </BrowserRouter>
         </QueryClientProvider>

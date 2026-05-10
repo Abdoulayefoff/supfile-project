@@ -50,3 +50,11 @@ services:
     App\Controller\Api\OAuthController:
         arguments:
             $frontendUrl: '%env(default::FRONTEND_URL)%'
+
+    # ── Service de réinitialisation de mot de passe
+    # $frontendUrl : utilisé pour construire le lien dans l'email (ex: https://www.supfile-cloud.fr)
+    # $mailerFrom  : adresse expéditrice de l'email (ex: noreply@supfile-cloud.fr)
+    App\Service\Auth\PasswordResetService:
+        arguments:
+            $frontendUrl: '%env(default::FRONTEND_URL)%'
+            $mailerFrom:  '%env(default::MAILER_FROM)%'
